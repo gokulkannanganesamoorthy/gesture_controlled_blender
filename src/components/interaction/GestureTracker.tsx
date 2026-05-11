@@ -38,6 +38,9 @@ export const GestureTracker: React.FC = () => {
   const smoothX = useRef(0);
   const smoothY = useRef(0);
 
+  // Track previous pinch span for zoom delta
+  const prevPinchDist = useRef<number | null>(null);
+
   // Gesture debounce
   const gestureBuffer = useRef<string[]>([]);
   const stableGesture = useRef<string>('none');
@@ -188,6 +191,9 @@ export const GestureTracker: React.FC = () => {
 
       const gesture = stableGesture.current;
 
+      // If not pinching, clear the pinch distance so re-entry is clean
+      if (gesture !== 'pinch') prevPinchDist.current = null;
+
       // Tracking point: use index finger tip as primary cursor
       const indexTip = landmarks[8];
       const thumbTip = landmarks[4];
@@ -200,15 +206,21 @@ export const GestureTracker: React.FC = () => {
       switch (gesture) {
         case 'pinch': {
           setActiveGesture('pinch');
-          // Pinch midpoint Y controls scale
-          const midY = (thumbTip.y + indexTip.y) / 2;
-          const prevMidY = smoothY.current;
-          const dy = midY - prevMidY;
-          if (Math.abs(dy) > DEAD_ZONE) {
-            const newScale = Math.max(0.3, Math.min(3.5, scaleRef.current - dy * 4));
-            scaleRef.current = newScale;
-            setModelScale(newScale);
+          // Track span between thumb and index across frames to determine zoom direction
+          const currentPinchDist = Math.hypot(
+            thumbTip.x - indexTip.x,
+            thumbTip.y - indexTip.y
+          );
+          if (prevPinchDist.current !== null) {
+            const delta = currentPinchDist - prevPinchDist.current;
+            // Positive delta = fingers spreading apart = zoom IN
+            if (Math.abs(delta) > 0.002) {
+              const newScale = Math.max(0.3, Math.min(3.5, scaleRef.current + delta * 8));
+              scaleRef.current = newScale;
+              setModelScale(newScale);
+            }
           }
+          prevPinchDist.current = currentPinchDist;
           break;
         }
         case 'fist': {
@@ -250,8 +262,9 @@ export const GestureTracker: React.FC = () => {
         }
         case 'three_fingers': {
           // Three fingers = Translate/Pan
+          // Negate dx because webcam is mirrored (scaleX(-1))
           setActiveGesture('two_fingers');
-          const dx = indexTip.x - smoothX.current;
+          const dx = smoothX.current - indexTip.x; // negated to fix mirror
           const dy = indexTip.y - smoothY.current;
           if (Math.abs(dx) > DEAD_ZONE || Math.abs(dy) > DEAD_ZONE) {
             const newPos: [number, number, number] = [
