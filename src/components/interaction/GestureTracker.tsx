@@ -11,6 +11,14 @@ export const GestureTracker: React.FC = () => {
   // Track previous coordinates for swipe detection
   const prevCoords = useRef<{x: number, y: number} | null>(null);
   const frameCount = useRef(0);
+  
+  // Use refs for current state to avoid re-running useEffect
+  const rotationRef = useRef(modelRotation);
+  const scaleRef = useRef(modelScale);
+
+  // Sync refs with store values
+  useEffect(() => { rotationRef.current = modelRotation; }, [modelRotation]);
+  useEffect(() => { scaleRef.current = modelScale; }, [modelScale]);
 
   useEffect(() => {
     let animationFrameId: number;
@@ -82,13 +90,8 @@ export const GestureTracker: React.FC = () => {
       
       ctx.restore();
       
-      // Throttle detection to every 2nd frame
-      frameCount.current++;
-      if (frameCount.current % 2 === 0) {
-        animationFrameId = requestAnimationFrame(predictWebcam);
-      } else {
-        animationFrameId = requestAnimationFrame(predictWebcam);
-      }
+      // Request next frame
+      animationFrameId = requestAnimationFrame(predictWebcam);
     };
 
     const analyzeGesture = (landmarks: any[]) => {
@@ -118,7 +121,7 @@ export const GestureTracker: React.FC = () => {
         if (prevCoords.current) {
           const dy = thumbTip.y - prevCoords.current.y;
           // Inverted: move hand up to zoom in
-          const newScale = Math.max(0.5, Math.min(3, modelScale - dy * 5));
+          const newScale = Math.max(0.5, Math.min(3, scaleRef.current - dy * 5));
           setModelScale(newScale);
         }
       } else if (isFist) {
@@ -138,9 +141,9 @@ export const GestureTracker: React.FC = () => {
           const dx = indexTip.x - prevCoords.current.x;
           const dy = indexTip.y - prevCoords.current.y;
           setModelRotation([
-            modelRotation[0] + dy * 2,
-            modelRotation[1] + dx * 2,
-            modelRotation[2]
+            rotationRef.current[0] + dy * 2,
+            rotationRef.current[1] + dx * 2,
+            rotationRef.current[2]
           ]);
         }
       } else if (indexExtended && middleExtended && !ringExtended && !pinkyExtended) {
@@ -167,7 +170,7 @@ export const GestureTracker: React.FC = () => {
         landmarkerRef.current.close();
       }
     };
-  }, [modelRotation, modelScale, setModelRotation, setModelScale, setActiveGesture, setExplodedView]);
+  }, []); // Run only on mount
 
   return (
     <div className="webcam-container">
