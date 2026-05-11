@@ -23,6 +23,9 @@ interface AppState {
   modelRotation: [number, number, number];
   setModelRotation: (rotation: [number, number, number]) => void;
   
+  modelPosition: [number, number, number];
+  setModelPosition: (position: [number, number, number]) => void;
+  
   modelScale: number;
   setModelScale: (scale: number) => void;
 }
@@ -48,6 +51,9 @@ export const useStore = create<AppState>((set) => ({
   
   modelRotation: [0, 0, 0],
   setModelRotation: (rotation) => set({ modelRotation: rotation }),
+  
+  modelPosition: [0, 0, 0],
+  setModelPosition: (position) => set({ modelPosition: position }),
   
   modelScale: 1,
   setModelScale: (scale) => set({ modelScale: scale }),
