@@ -6,7 +6,7 @@ export const GestureTracker: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const landmarkerRef = useRef<HandLandmarker | null>(null);
-  const { setActiveGesture, setModelRotation, modelRotation, setModelScale, modelScale, setExplodedView } = useStore();
+  const { setActiveGesture, setModelRotation, modelRotation, setModelPosition, modelPosition, setModelScale, modelScale, setExplodedView } = useStore();
   
   // Track previous coordinates for swipe detection
   const prevCoords = useRef<{x: number, y: number} | null>(null);
@@ -14,10 +14,12 @@ export const GestureTracker: React.FC = () => {
   
   // Use refs for current state to avoid re-running useEffect
   const rotationRef = useRef(modelRotation);
+  const positionRef = useRef(modelPosition);
   const scaleRef = useRef(modelScale);
 
   // Sync refs with store values
   useEffect(() => { rotationRef.current = modelRotation; }, [modelRotation]);
+  useEffect(() => { positionRef.current = modelPosition; }, [modelPosition]);
   useEffect(() => { scaleRef.current = modelScale; }, [modelScale]);
 
   useEffect(() => {
@@ -112,31 +114,44 @@ export const GestureTracker: React.FC = () => {
 
       const isFist = !indexExtended && !middleExtended && !ringExtended && !pinkyExtended;
       const isOpenPalm = indexExtended && middleExtended && ringExtended && pinkyExtended;
+      const isTwoFingers = indexExtended && middleExtended && !ringExtended && !pinkyExtended;
+      const isThreeFingers = indexExtended && middleExtended && ringExtended && !pinkyExtended;
 
       let detectedGesture: 'none' | 'swipe' | 'pinch' | 'palm' | 'fist' | 'two_fingers' = 'none';
 
+      // Priority 1: Pinch (Zoom) - Detect even if palm is transitioning
       if (isPinch) {
         detectedGesture = 'pinch';
-        // Handle Zoom
         if (prevCoords.current) {
           const dy = thumbTip.y - prevCoords.current.y;
-          // Inverted: move hand up to zoom in
           const newScale = Math.max(0.5, Math.min(3, scaleRef.current - dy * 5));
           setModelScale(newScale);
         }
-      } else if (isFist) {
+      } 
+      // Priority 2: Fist (Reset)
+      else if (isFist) {
         detectedGesture = 'fist';
-        // Reset View
         setModelRotation([0, 0, 0]);
+        setModelPosition([0, 0, 0]);
         setModelScale(1);
         setExplodedView(false);
-      } else if (isOpenPalm) {
-        detectedGesture = 'palm';
-        // Explode
-        setExplodedView(true);
-      } else if (indexExtended && !middleExtended && !ringExtended && !pinkyExtended) {
+      } 
+      // Priority 3: Three Fingers (Move / Translate)
+      else if (isThreeFingers) {
+        detectedGesture = 'two_fingers'; // Mapping to existing enum for simplicity or extend enum
+        if (prevCoords.current) {
+          const dx = indexTip.x - prevCoords.current.x;
+          const dy = indexTip.y - prevCoords.current.y;
+          setModelPosition([
+            positionRef.current[0] + dx * 10,
+            positionRef.current[1] - dy * 10,
+            positionRef.current[2]
+          ]);
+        }
+      }
+      // Priority 4: Two Fingers (Rotate)
+      else if (isTwoFingers) {
         detectedGesture = 'swipe';
-        // Rotate
         if (prevCoords.current) {
           const dx = indexTip.x - prevCoords.current.x;
           const dy = indexTip.y - prevCoords.current.y;
@@ -146,8 +161,15 @@ export const GestureTracker: React.FC = () => {
             rotationRef.current[2]
           ]);
         }
-      } else if (indexExtended && middleExtended && !ringExtended && !pinkyExtended) {
-        detectedGesture = 'two_fingers';
+      }
+      // Priority 5: Open Palm (Explode)
+      else if (isOpenPalm) {
+        detectedGesture = 'palm';
+        setExplodedView(true);
+      }
+      // Priority 6: One Finger (Selection / Hover - currently unused)
+      else if (indexExtended && !middleExtended) {
+        detectedGesture = 'none';
       }
 
       setActiveGesture(detectedGesture);

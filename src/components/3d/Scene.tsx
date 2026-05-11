@@ -6,7 +6,7 @@ import { useSpring, a } from '@react-spring/three';
 
 export const Scene: React.FC = () => {
   const meshRef = useRef<Mesh>(null);
-  const { scannerMode, theme, modelRotation, modelScale, explodedView } = useStore();
+  const { scannerMode, theme, modelRotation, modelPosition, modelScale, explodedView } = useStore();
 
   // Simple animation for the placeholder
   useFrame((state) => {
@@ -28,8 +28,9 @@ export const Scene: React.FC = () => {
   if (theme === 'light') color = '#0066cc';
 
   // React Spring for smooth transitions
-  const { scale } = useSpring({
+  const { scale, position } = useSpring({
     scale: explodedView ? [1.5, 1.5, 1.5] : [modelScale, modelScale, modelScale],
+    position: modelPosition,
     config: { mass: 1, tension: 170, friction: 26 }
   });
 
@@ -40,7 +41,7 @@ export const Scene: React.FC = () => {
       <directionalLight position={[-10, -10, -5]} intensity={0.5} color={color} />
       
       {/* @ts-ignore - a.mesh works fine but types might complain */}
-      <a.mesh ref={meshRef} rotation={modelRotation} scale={scale as any}>
+      <a.mesh ref={meshRef} rotation={modelRotation} position={position as any} scale={scale as any}>
         <torusKnotGeometry args={[1, 0.3, 64, 16]} />
         <meshStandardMaterial 
           color={color} 
