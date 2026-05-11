@@ -54,41 +54,59 @@ const AxisIndicator = () => {
     },
   ];
 
-  const cx = 36,
-    cy = 36,
-    len = 26;
+  const cx = 36, cy = 36, len = 26;
+
+  // Compute depth (z toward viewer) for each axis to sort and style
+  const getDepth = (vec: [number, number, number]) => {
+    const cosRY = Math.cos(-ry), sinRY = Math.sin(-ry);
+    const cosRX = Math.cos(-rx), sinRX = Math.sin(-rx);
+    let [vx, vy, vz] = vec;
+    const vx1 = vx * cosRY + vz * sinRY;
+    const vz1 = -vx * sinRY + vz * cosRY;
+    const vy2 = vy * cosRX - vz1 * sinRX;
+    const vz2 = vy * sinRX + vz1 * cosRX;
+    return vz2;
+  };
+
+  const sorted = [...axes].sort((a, b) => getDepth(a.vec) - getDepth(b.vec));
 
   return (
     <svg width={72} height={72} style={{ display: 'block' }}>
-      {axes.map(({ label, vec, color }) => {
+      {sorted.map(({ label, vec, color }) => {
         const { sx, sy } = project(vec);
         const ex = cx + sx * len;
         const ey = cy + sy * len;
+        const depth = getDepth(vec);
+        const behind = depth < -0.05;
+        // Always push label out at least 10px from center so Z is visible
+        const mag = Math.max(Math.hypot(sx, sy), 0.15);
+        const nx = sx / mag, ny = sy / mag;
+        const lx = cx + nx * (len + 10);
+        const ly = cy + ny * (len + 10);
         return (
-          <g key={label}>
+          <g key={label} opacity={behind ? 0.3 : 1}>
             <line
-              x1={cx}
-              y1={cy}
-              x2={ex}
-              y2={ey}
+              x1={cx} y1={cy} x2={ex} y2={ey}
               stroke={color}
-              strokeWidth={1.5}
+              strokeWidth={behind ? 1 : 1.8}
+              strokeDasharray={behind ? '3 2' : undefined}
             />
+            <circle cx={ex} cy={ey} r={2} fill={color} />
             <text
-              x={ex + sx * 6}
-              y={ey + sy * 6}
+              x={lx} y={ly}
               fill={color}
               fontSize={9}
               textAnchor="middle"
               dominantBaseline="middle"
               fontFamily="JetBrains Mono, monospace"
+              fontWeight={500}
             >
               {label}
             </text>
           </g>
         );
       })}
-      <circle cx={cx} cy={cy} r={3} fill="#888" />
+      <circle cx={cx} cy={cy} r={3} fill="#555" />
     </svg>
   );
 };
@@ -311,6 +329,10 @@ export const HUD = () => {
             <span className="prop-label y">Rotation Y</span>
             <span className="prop-val mono">{toDeg(modelRotation[1])}</span>
           </div>
+          <div className="prop-row">
+            <span className="prop-label z">Rotation Z</span>
+            <span className="prop-val mono">{toDeg(modelRotation[2])}</span>
+          </div>
           <div className="prop-sep" />
           <div className="prop-row">
             <span className="prop-label x">Position X</span>
@@ -319,6 +341,10 @@ export const HUD = () => {
           <div className="prop-row">
             <span className="prop-label y">Position Y</span>
             <span className="prop-val mono">{fmt(modelPosition[1])}</span>
+          </div>
+          <div className="prop-row">
+            <span className="prop-label z">Position Z</span>
+            <span className="prop-val mono">{fmt(modelPosition[2])}</span>
           </div>
           <div className="prop-sep" />
           <div className="prop-row">
