@@ -1,138 +1,440 @@
 import { useStore } from '../../store';
-import type { Theme, ScannerMode } from '../../store';
-import { Monitor, Layers, Eye, Activity, Mic, MicOff, Box, Hand, Maximize2, Sun, Moon, Zap } from 'lucide-react';
+import type { ScannerMode } from '../../store';
+import {
+  Layers,
+  Monitor,
+  Upload,
+  Hand,
+  RotateCcw,
+  Box,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
+import { useRef, useState } from 'react';
+
+const toDeg = (r: number) => ((r * 180) / Math.PI).toFixed(1) + '°';
+const fmt = (n: number) => n.toFixed(3);
+
+// ---- Axis Indicator (SVG) ----
+const AxisIndicator = () => {
+  const { modelRotation } = useStore();
+  const [rx, ry] = modelRotation;
+
+  // Project X/Y/Z unit vectors using simple rotation math
+  const project = (vec: [number, number, number]) => {
+    // Apply Y rotation then X rotation
+    const cosRY = Math.cos(-ry),
+      sinRY = Math.sin(-ry);
+    const cosRX = Math.cos(-rx),
+      sinRX = Math.sin(-rx);
+    let [x, y, z] = vec;
+    // rotate Y
+    const x1 = x * cosRY + z * sinRY;
+    const z1 = -x * sinRY + z * cosRY;
+    // rotate X
+    const y2 = y * cosRX - z1 * sinRX;
+    return { sx: x1, sy: -y2 }; // flip y for screen
+  };
+
+  const axes = [
+    {
+      label: 'X',
+      vec: [1, 0, 0] as [number, number, number],
+      color: '#e06060',
+    },
+    {
+      label: 'Y',
+      vec: [0, 1, 0] as [number, number, number],
+      color: '#60c060',
+    },
+    {
+      label: 'Z',
+      vec: [0, 0, 1] as [number, number, number],
+      color: '#6080e0',
+    },
+  ];
+
+  const cx = 36,
+    cy = 36,
+    len = 26;
+
+  return (
+    <svg width={72} height={72} style={{ display: 'block' }}>
+      {axes.map(({ label, vec, color }) => {
+        const { sx, sy } = project(vec);
+        const ex = cx + sx * len;
+        const ey = cy + sy * len;
+        return (
+          <g key={label}>
+            <line
+              x1={cx}
+              y1={cy}
+              x2={ex}
+              y2={ey}
+              stroke={color}
+              strokeWidth={1.5}
+            />
+            <text
+              x={ex + sx * 6}
+              y={ey + sy * 6}
+              fill={color}
+              fontSize={9}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontFamily="JetBrains Mono, monospace"
+            >
+              {label}
+            </text>
+          </g>
+        );
+      })}
+      <circle cx={cx} cy={cy} r={3} fill="#888" />
+    </svg>
+  );
+};
+
+// ---- Collapsible Section ----
+const Section = ({
+  label,
+  children,
+  defaultOpen = true,
+}: {
+  label: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="section">
+      <button className="section-header" onClick={() => setOpen(!open)}>
+        {open ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+        {label}
+      </button>
+      {open && <div className="section-body">{children}</div>}
+    </div>
+  );
+};
+
+// ---- Slider Row ----
+const SliderRow = ({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+}) => (
+  <div className="prop-row">
+    <span className="prop-label">{label}</span>
+    <div className="prop-slider-wrap">
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="prop-slider"
+      />
+      <span className="prop-val">{value.toFixed(2)}</span>
+    </div>
+  </div>
+);
 
 export const HUD = () => {
   const {
-    theme, setTheme,
-    scannerMode, setScannerMode,
+    scannerMode,
+    setScannerMode,
     activeGesture,
-    isListeningVoice, setIsListeningVoice,
-    modelRotation, modelPosition, modelScale,
+    modelRotation,
+    modelPosition,
+    modelScale,
+    modelUrl,
+    modelName,
+    setModel,
+    explodedView,
+    setExplodedView,
+    materialColor,
+    setMaterialColor,
+    roughness,
+    setRoughness,
+    metalness,
+    setMetalness,
+    envPreset,
+    setEnvPreset,
+    bgColor,
+    setBgColor,
+    setModelRotation,
+    setModelPosition,
+    setModelScale,
   } = useStore();
 
-  const fmt = (n: number) => n.toFixed(2).padStart(6, ' ');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setModel(url, file.name);
+  };
+
+  const handleReset = () => {
+    setModelRotation([0, 0, 0]);
+    setModelPosition([0, 0, 0]);
+    setModelScale(1);
+    setExplodedView(false);
+  };
 
   const gestureLabel: Record<string, string> = {
-    none: 'None',
-    swipe: '2-Finger Rotate',
-    two_fingers: '3-Finger Pan',
-    pinch: 'Pinch Zoom',
-    palm: 'Open Palm',
-    fist: 'Fist Reset',
+    none: '—',
+    swipe: '2-finger rotate',
+    two_fingers: '3-finger pan',
+    pinch: 'pinch zoom',
+    palm: 'explode',
+    fist: 'reset',
   };
+
+  const modes: { key: ScannerMode; icon: React.ReactNode; label: string }[] = [
+    { key: 'standard', icon: <Monitor size={13} />, label: 'Solid' },
+    { key: 'wireframe', icon: <Layers size={13} />, label: 'Wireframe' },
+  ];
 
   return (
     <div className="layout">
-      {/* Top Bar */}
+      {/* ── Topbar ── */}
       <header className="topbar">
-        <span className="topbar-logo">VISIONARY_3D</span>
+        <span className="topbar-logo">VISIONARY 3D</span>
         <div className="topbar-sep" />
-        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--mono)' }}>
-          {scannerMode.toUpperCase()}
-        </span>
+        <div className="topbar-modes">
+          {modes.map((m) => (
+            <button
+              key={m.key}
+              className={`topbar-mode-btn ${scannerMode === m.key ? 'active' : ''}`}
+              onClick={() => setScannerMode(m.key)}
+              title={m.label}
+            >
+              {m.icon} {m.label}
+            </button>
+          ))}
+        </div>
         <div className="topbar-right">
-          <button className={`btn icon-only ${theme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark' as Theme)} title="Dark">
-            <Moon size={13} />
+          <button
+            className="topbar-btn accent"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload size={13} /> Import GLB
           </button>
-          <button className={`btn icon-only ${theme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light' as Theme)} title="Light">
-            <Sun size={13} />
-          </button>
-          <button className={`btn icon-only ${theme === 'cyberpunk' ? 'active' : ''}`} onClick={() => setTheme('cyberpunk' as Theme)} title="Cyberpunk">
-            <Zap size={13} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".glb,.gltf"
+            style={{ display: 'none' }}
+            onChange={handleFileUpload}
+          />
+          <button
+            className="topbar-btn"
+            onClick={handleReset}
+            title="Reset Transform"
+          >
+            <RotateCcw size={13} />
           </button>
         </div>
       </header>
 
-      {/* Left Sidebar */}
-      <aside className="sidebar">
-        <div className="sidebar-group">
-          <div className="sidebar-group-label">Viewport</div>
-          {(['standard', 'wireframe', 'xray', 'technical'] as ScannerMode[]).map(mode => (
+      {/* ── Canvas Slot (filled by App.tsx) ── */}
+      <div className="canvas-area">
+        {/* Axis indicator overlay */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 12,
+            right: 12,
+            zIndex: 10,
+            opacity: 0.85,
+          }}
+        >
+          <AxisIndicator />
+        </div>
+
+        {/* No model notice */}
+        {!modelUrl && (
+          <div className="no-model-notice">
+            <Box size={28} style={{ marginBottom: 8, opacity: 0.3 }} />
+            <p>No model loaded</p>
+            <p className="sub">Showing placeholder — import a GLB to begin</p>
             <button
-              key={mode}
-              className={`btn ${scannerMode === mode ? 'active' : ''}`}
-              onClick={() => setScannerMode(mode)}
+              className="topbar-btn accent"
+              style={{ marginTop: 12 }}
+              onClick={() => fileInputRef.current?.click()}
             >
-              {mode === 'standard' && <Monitor size={13} />}
-              {mode === 'wireframe' && <Layers size={13} />}
-              {mode === 'xray' && <Eye size={13} />}
-              {mode === 'technical' && <Activity size={13} />}
-              {mode.charAt(0).toUpperCase() + mode.slice(1)}
+              <Upload size={13} /> Import GLB / GLTF
             </button>
-          ))}
-        </div>
+          </div>
+        )}
+      </div>
 
-        <div className="sidebar-group">
-          <div className="sidebar-group-label">Interaction</div>
-          <button className={`btn ${isListeningVoice ? 'active' : ''}`} onClick={() => setIsListeningVoice(!isListeningVoice)}>
-            {isListeningVoice ? <Mic size={13} /> : <MicOff size={13} />}
-            Voice Control
-          </button>
-        </div>
-      </aside>
-
-      {/* 3D Canvas lives in App.tsx, this is just the grid slot */}
-      <div className="canvas-area" />
-
-      {/* Right Inspector */}
+      {/* ── Right Properties Panel ── */}
       <aside className="inspector">
-        <div className="inspector-header">
-          <Box size={11} /> Properties
-        </div>
+        {/* Model info */}
+        <Section label="Object">
+          <div className="prop-row">
+            <span className="prop-label">File</span>
+            <span
+              className="prop-val mono"
+              style={{
+                fontSize: '0.6rem',
+                maxWidth: 120,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {modelName ?? 'placeholder.mesh'}
+            </span>
+          </div>
+        </Section>
 
-        <div className="inspector-section">
-          <div className="inspector-section-label">Transform</div>
-          <div className="data-row"><span className="data-key">rot.x</span><span className="data-val">{fmt(modelRotation[0])}</span></div>
-          <div className="data-row"><span className="data-key">rot.y</span><span className="data-val">{fmt(modelRotation[1])}</span></div>
-          <div className="data-row"><span className="data-key">pos.x</span><span className="data-val">{fmt(modelPosition[0])}</span></div>
-          <div className="data-row"><span className="data-key">pos.y</span><span className="data-val">{fmt(modelPosition[1])}</span></div>
-          <div className="data-row"><span className="data-key">scale</span><span className="data-val">{fmt(modelScale)}</span></div>
-        </div>
+        {/* Transform */}
+        <Section label="Transform">
+          <div className="prop-row">
+            <span className="prop-label x">Rotation X</span>
+            <span className="prop-val mono">{toDeg(modelRotation[0])}</span>
+          </div>
+          <div className="prop-row">
+            <span className="prop-label y">Rotation Y</span>
+            <span className="prop-val mono">{toDeg(modelRotation[1])}</span>
+          </div>
+          <div className="prop-sep" />
+          <div className="prop-row">
+            <span className="prop-label x">Position X</span>
+            <span className="prop-val mono">{fmt(modelPosition[0])}</span>
+          </div>
+          <div className="prop-row">
+            <span className="prop-label y">Position Y</span>
+            <span className="prop-val mono">{fmt(modelPosition[1])}</span>
+          </div>
+          <div className="prop-sep" />
+          <div className="prop-row">
+            <span className="prop-label">Scale</span>
+            <span className="prop-val mono">{fmt(modelScale)}</span>
+          </div>
+          <div className="prop-row">
+            <span className="prop-label">Exploded</span>
+            <button
+              className={`toggle-btn ${explodedView ? 'active' : ''}`}
+              onClick={() => setExplodedView(!explodedView)}
+            >
+              {explodedView ? 'ON' : 'OFF'}
+            </button>
+          </div>
+        </Section>
 
-        <div className="inspector-section">
-          <div className="inspector-section-label">Gesture Guide</div>
-          <div className="gesture-row">
-            <span className="gesture-key">2 finger</span>
-            <span className="gesture-val">Rotate</span>
+        {/* Material */}
+        <Section label="Material">
+          <div className="prop-row">
+            <span className="prop-label">Color</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="color"
+                value={materialColor}
+                onChange={(e) => setMaterialColor(e.target.value)}
+                className="color-swatch"
+              />
+              <span className="prop-val mono" style={{ fontSize: '0.65rem' }}>
+                {materialColor}
+              </span>
+            </div>
           </div>
-          <div className="gesture-row">
-            <span className="gesture-key">3 finger</span>
-            <span className="gesture-val">Pan</span>
-          </div>
-          <div className="gesture-row">
-            <span className="gesture-key">Pinch</span>
-            <span className="gesture-val">Zoom</span>
-          </div>
-          <div className="gesture-row">
-            <span className="gesture-key">Palm</span>
-            <span className="gesture-val">Explode</span>
-          </div>
-          <div className="gesture-row">
-            <span className="gesture-key">Fist</span>
-            <span className="gesture-val">Reset</span>
-          </div>
-        </div>
+          <SliderRow
+            label="Roughness"
+            value={roughness}
+            min={0}
+            max={1}
+            step={0.01}
+            onChange={setRoughness}
+          />
+          <SliderRow
+            label="Metalness"
+            value={metalness}
+            min={0}
+            max={1}
+            step={0.01}
+            onChange={setMetalness}
+          />
+        </Section>
 
-        <div className="inspector-section" style={{ marginTop: 'auto' }}>
-          <div className="inspector-section-label">Active Gesture</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: '0.7rem', color: activeGesture !== 'none' ? 'var(--text)' : 'var(--text-muted)', padding: '4px 0' }}>
-            {gestureLabel[activeGesture] ?? activeGesture}
+        {/* Environment */}
+        <Section label="Environment" defaultOpen={false}>
+          <div className="prop-row">
+            <span className="prop-label">HDRI</span>
+            <select
+              className="prop-select"
+              value={envPreset}
+              onChange={(e) => setEnvPreset(e.target.value as any)}
+            >
+              <option value="none">None</option>
+              <option value="city">City</option>
+              <option value="sunset">Sunset</option>
+              <option value="dawn">Dawn</option>
+              <option value="studio">Studio</option>
+            </select>
           </div>
-        </div>
+          <div className="prop-row">
+            <span className="prop-label">Background</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="color"
+                value={bgColor}
+                onChange={(e) => setBgColor(e.target.value)}
+                className="color-swatch"
+              />
+              <span className="prop-val mono" style={{ fontSize: '0.65rem' }}>
+                {bgColor}
+              </span>
+            </div>
+          </div>
+        </Section>
+
+        {/* Gestures */}
+        <Section label="Gesture Controls" defaultOpen={false}>
+          {[
+            ['2 fingers', 'Rotate model'],
+            ['3 fingers', 'Pan / translate'],
+            ['Pinch', 'Zoom in / out'],
+            ['Open palm', 'Exploded view'],
+            ['Fist', 'Reset all transforms'],
+          ].map(([k, v]) => (
+            <div className="prop-row" key={k}>
+              <span className="prop-label">{k}</span>
+              <span className="prop-val">{v}</span>
+            </div>
+          ))}
+        </Section>
       </aside>
 
-      {/* Status Bar */}
+      {/* ── Status Bar ── */}
       <footer className="statusbar">
         <div className="status-item">
-          <div className={`status-dot ${activeGesture !== 'none' ? 'active' : ''}`} />
-          <span>HAND TRACK</span>
+          <div
+            className={`status-dot ${activeGesture !== 'none' ? 'active' : ''}`}
+          />
+          <span>GESTURE: {gestureLabel[activeGesture] ?? '—'}</span>
         </div>
+        <div className="statusbar-sep" />
         <div className="status-item">
-          <div className={`status-dot ${isListeningVoice ? 'live' : ''}`} />
-          <span>VOICE</span>
+          <Hand size={10} />
+          <span>HAND TRACKING</span>
         </div>
-        <span style={{ marginLeft: 'auto' }}>{scannerMode.toUpperCase()} MODE</span>
+        <span style={{ marginLeft: 'auto' }}>
+          {modelName ? modelName : 'No file'} · {scannerMode.toUpperCase()}
+        </span>
       </footer>
     </div>
   );

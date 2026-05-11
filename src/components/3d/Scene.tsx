@@ -1,57 +1,72 @@
-import React, { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { useStore } from '../../store';
-import { Mesh } from 'three';
+import { Suspense } from 'react';
+import { useGLTF } from '@react-three/drei';
 import { useSpring, a } from '@react-spring/three';
+import { useStore } from '../../store';
+import { useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { Mesh } from 'three';
 
-export const Scene: React.FC = () => {
-  const meshRef = useRef<Mesh>(null);
-  const { scannerMode, theme, modelRotation, modelPosition, modelScale, explodedView } = useStore();
+// Separate component so useGLTF is only called when a URL exists
+const GLBModel = ({ url }: { url: string }) => {
+  const { scene } = useGLTF(url);
+  return <primitive object={scene} />;
+};
 
-  // Simple animation for the placeholder
+const PlaceholderMesh = () => {
+  const ref = useRef<Mesh>(null);
+  const { scannerMode, materialColor, roughness, metalness } = useStore();
+
   useFrame((state) => {
-    if (meshRef.current && !explodedView) {
-      meshRef.current.rotation.y += 0.005;
-      meshRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.2;
+    if (ref.current) {
+      ref.current.rotation.y += 0.004;
+      ref.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.4) * 0.15;
     }
   });
 
-  // Material settings based on scanner mode
-  const wireframe = scannerMode === 'wireframe';
-  const transparent = scannerMode === 'xray';
-  const opacity = transparent ? 0.3 : 1;
+  return (
+    <mesh ref={ref}>
+      <torusKnotGeometry args={[1, 0.3, 64, 16]} />
+      <meshStandardMaterial
+        color={materialColor}
+        wireframe={scannerMode === 'wireframe'}
+        transparent={scannerMode === 'xray'}
+        opacity={scannerMode === 'xray' ? 0.25 : 1}
+        roughness={roughness}
+        metalness={metalness}
+      />
+    </mesh>
+  );
+};
 
-  // Color based on theme
-  let color = '#ffffff';
-  if (theme === 'dark') color = '#00e5ff';
-  if (theme === 'cyberpunk') color = '#ff0055';
-  if (theme === 'light') color = '#0066cc';
+export const Scene = () => {
+  const {
+    modelUrl,
+    modelRotation,
+    modelPosition,
+    modelScale,
+    explodedView,
+  } = useStore();
 
-  // React Spring for smooth transitions
   const { scale, position } = useSpring({
-    scale: explodedView ? [1.5, 1.5, 1.5] : [modelScale, modelScale, modelScale],
+    scale: explodedView
+      ? [modelScale * 1.5, modelScale * 1.5, modelScale * 1.5]
+      : [modelScale, modelScale, modelScale],
     position: modelPosition,
-    config: { mass: 1, tension: 170, friction: 26 }
+    config: { mass: 1, tension: 160, friction: 28 },
   });
 
   return (
     <>
-      <ambientLight intensity={theme === 'light' ? 1.5 : 0.5} />
-      <directionalLight position={[10, 10, 5]} intensity={1.5} />
-      <directionalLight position={[-10, -10, -5]} intensity={0.5} color={color} />
-      
-      {/* @ts-ignore - a.mesh works fine but types might complain */}
-      <a.mesh ref={meshRef} rotation={modelRotation} position={position as any} scale={scale as any}>
-        <torusKnotGeometry args={[1, 0.3, 64, 16]} />
-        <meshStandardMaterial 
-          color={color} 
-          wireframe={wireframe}
-          transparent={transparent}
-          opacity={opacity}
-          roughness={0.4}
-          metalness={0.6}
-        />
-      </a.mesh>
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[5, 8, 5]} intensity={1.2} />
+      <directionalLight position={[-5, -4, -5]} intensity={0.3} color="#aaaaaa" />
+
+      {/* @ts-ignore */}
+      <a.group rotation={modelRotation} position={position as any} scale={scale as any}>
+        <Suspense fallback={null}>
+          {modelUrl ? <GLBModel url={modelUrl} /> : <PlaceholderMesh />}
+        </Suspense>
+      </a.group>
     </>
   );
 };
