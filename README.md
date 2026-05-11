@@ -1,73 +1,89 @@
-# React + TypeScript + Vite
+# Visionary 3D
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A gesture-controlled 3D model viewer built with React, Three.js, and MediaPipe. Load any GLB/GLTF file and interact with it in real time using your webcam and hand gestures, with no mouse or keyboard needed.
 
-Currently, two official plugins are available:
+## Demo
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Run locally with:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Stack
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Layer | Technology |
+|-------|-----------|
+| Framework | React 18 + TypeScript + Vite |
+| 3D Rendering | Three.js, React Three Fiber, Drei |
+| Post-processing | @react-three/postprocessing |
+| Animation | @react-spring/three |
+| Hand Tracking | MediaPipe Tasks Vision |
+| State | Zustand |
+| Icons | Lucide React |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Gesture Controls
+
+| Gesture | Action |
+|---------|--------|
+| 2 fingers (index + middle) | Rotate model |
+| 3 fingers (index + middle + ring) | Pan / translate |
+| Pinch (thumb + index) | Zoom in / out |
+| Open palm | Toggle exploded view |
+| Fist | Reset all transforms |
+
+All gestures include exponential smoothing, a dead zone filter, and a 6-frame debounce to eliminate jitter.
+
+## Features
+
+- Import any GLB or GLTF 3D model via file picker
+- Real-time hand tracking via webcam (single hand, GPU-accelerated)
+- XYZ axis indicator with depth-sorted rendering
+- Live transform inspector: Rotation X/Y/Z, Position X/Y/Z, Scale
+- Viewport modes: Solid, Wireframe, X-Ray
+- Material customization: color, roughness, metalness
+- HDRI environment presets: City, Sunset, Dawn, Studio
+- Background color picker
+- Infinite grid floor for spatial reference
+- Collapsible properties panel
+- Gesture guide always accessible in the sidebar
+
+## Project Structure
+
 ```
+src/
+  components/
+    3d/
+      Scene.tsx           # Three.js scene, loads GLB via useGLTF
+    interaction/
+      GestureTracker.tsx  # MediaPipe hand tracking and gesture logic
+    ui/
+      HUD.tsx             # Full Blender-style IDE layout
+  store.ts                # Zustand global state
+  App.tsx                 # Canvas setup, layout root
+  index.css               # Design system (dark monochrome IDE theme)
+```
+
+## Getting Started
+
+```bash
+git clone https://github.com/gokulkannanganesamoorthy/gesture_controlled_blender.git
+cd gesture_controlled_blender
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`, allow webcam access, and click **Import GLB** to load a model.
+
+## Build
+
+```bash
+npm run build
+```
+
+Output goes to `dist/`. Serve with any static host (Vercel, Netlify, GitHub Pages).
+
+## Roadmap
+
+See [ROADMAP.md](./ROADMAP.md) for the full list of planned production features.
