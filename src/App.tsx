@@ -22,6 +22,7 @@ function App() {
     setModelRotation, setModelPosition, setModelScale, setExplodedView,
     setCameraPreset, triggerScreenshot,
     showAddMenu, setShowAddMenu,
+    transformMode, setTransformMode,
   } = useStore();
 
   // Screenshot handler
@@ -52,7 +53,13 @@ function App() {
         case '5': setCameraPreset('free'); break;
         case 'p': case 'P': setPresentationMode(!presentationMode); break;
         case 't': case 'T': setTurntableMode(!turntableMode); break;
-        case 'Escape': setPresentationMode(false); setShowAddMenu(false); break;
+        case 'Escape': 
+          if (transformMode) setTransformMode(null);
+          else { setPresentationMode(false); setShowAddMenu(false); }
+          break;
+        case 'g': case 'G': setTransformMode(transformMode === 'translate' ? null : 'translate'); break;
+        case 'r': case 'R': setTransformMode(transformMode === 'rotate' ? null : 'rotate'); break;
+        case 's': case 'S': setTransformMode(transformMode === 'scale' ? null : 'scale'); break;
         case 'A':
           if (e.shiftKey) { e.preventDefault(); setShowAddMenu(!showAddMenu); }
           break;
@@ -71,9 +78,9 @@ function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [presentationMode, turntableMode, showAddMenu, setCameraPreset, setPresentationMode,
+  }, [presentationMode, turntableMode, showAddMenu, transformMode, setCameraPreset, setPresentationMode,
       setTurntableMode, setModelRotation, setModelPosition, setModelScale,
-      setExplodedView, triggerScreenshot, setShowAddMenu]);
+      setExplodedView, triggerScreenshot, setShowAddMenu, setTransformMode]);
 
   const canvasStyle = presentationMode
     ? { position: 'fixed' as const, inset: 0, zIndex: 1 }

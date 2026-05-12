@@ -237,6 +237,7 @@ export const HUD = () => {
     renderQuality, setRenderQuality,
     fps, triggerScreenshot,
     showAddMenu, setShowAddMenu,
+    transformMode, setTransformMode,
   } = useStore();
 
   const hasContent = !!modelName || !!primitiveType;
@@ -406,13 +407,17 @@ export const HUD = () => {
           </div>
           {/* Viewport hint bar */}
           <div className="viewport-hint">
-            <span>LMB Rotate</span>
+            <span>LMB Rot</span>
             <span className="hint-sep">·</span>
             <span>MMB Pan</span>
             <span className="hint-sep">·</span>
-            <span>Scroll Zoom</span>
-            <span className="hint-sep">·</span>
             <span>Shift+A Add</span>
+            <span className="hint-sep">·</span>
+            <span>G Grab</span>
+            <span className="hint-sep">·</span>
+            <span>R Rot</span>
+            <span className="hint-sep">·</span>
+            <span>S Scale</span>
           </div>
           {!hasContent && (
             <div className="no-model-notice">
@@ -599,6 +604,19 @@ export const HUD = () => {
 
           {/* Controls */}
           <Section label="Controls" defaultOpen={false}>
+            {/* Gizmos */}
+            <div className="prop-row" style={{ marginBottom: 4 }}>
+              <span className="prop-label" style={{ fontWeight: 500, color: 'var(--text)' }}>Gizmos</span>
+            </div>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+              <button className={`preset-btn ${transformMode === 'translate' ? 'active' : ''}`}
+                onClick={() => setTransformMode(transformMode === 'translate' ? null : 'translate')}>Translate (G)</button>
+              <button className={`preset-btn ${transformMode === 'rotate' ? 'active' : ''}`}
+                onClick={() => setTransformMode(transformMode === 'rotate' ? null : 'rotate')}>Rotate (R)</button>
+              <button className={`preset-btn ${transformMode === 'scale' ? 'active' : ''}`}
+                onClick={() => setTransformMode(transformMode === 'scale' ? null : 'scale')}>Scale (S)</button>
+            </div>
+            <div className="prop-sep" />
             <div className="prop-row" style={{ marginBottom: 4 }}>
               <span className="prop-label" style={{ fontWeight: 500, color: 'var(--text)' }}>Mouse</span>
             </div>
@@ -659,7 +677,7 @@ export const HUD = () => {
               <div className="statusbar-sep" />
             </>
           )}
-          <span className="status-hint">LMB Rotate · MMB Pan · Scroll Zoom · Shift+A Add</span>
+          <span className="status-hint">LMB Rot · MMB Pan · Shift+A Add · G Grab · R Rot · S Scale</span>
           <span style={{ marginLeft: 'auto', display: 'flex', gap: 12, alignItems: 'center' }}>
             <span>{modelName ?? 'Empty'}</span>
             <div className="statusbar-sep" style={{ height: 10, margin: 0 }} />

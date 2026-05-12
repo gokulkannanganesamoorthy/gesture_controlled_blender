@@ -5,6 +5,7 @@ export type Gesture = 'none' | 'swipe' | 'pinch' | 'palm' | 'fist' | 'two_finger
 export type CameraPreset = 'free' | 'front' | 'side' | 'top' | 'iso';
 export type RenderQuality = 'low' | 'medium' | 'high';
 export type PrimitiveType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | null;
+export type TransformMode = 'translate' | 'rotate' | 'scale' | null;
 
 interface AppState {
   // Model
@@ -39,6 +40,12 @@ interface AppState {
   setModelScale: (s: number) => void;
   explodedView: boolean;
   setExplodedView: (v: boolean) => void;
+
+  // Gizmos
+  transformMode: TransformMode;
+  setTransformMode: (mode: TransformMode) => void;
+  isDraggingGizmo: boolean;
+  setIsDraggingGizmo: (v: boolean) => void;
 
   // Material
   materialColor: string;
@@ -107,6 +114,11 @@ export const useStore = create<AppState>((set) => ({
   setModelScale: (s) => set({ modelScale: s }),
   explodedView: false,
   setExplodedView: (v) => set({ explodedView: v }),
+
+  transformMode: null,
+  setTransformMode: (mode) => set({ transformMode: mode }),
+  isDraggingGizmo: false,
+  setIsDraggingGizmo: (v) => set({ isDraggingGizmo: v }),
 
   materialColor: '#cccccc',
   setMaterialColor: (c) => set({ materialColor: c }),

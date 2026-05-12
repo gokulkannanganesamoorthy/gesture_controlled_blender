@@ -1,6 +1,5 @@
 import { Suspense, useEffect, useRef } from 'react';
-import { useGLTF } from '@react-three/drei';
-import { useSpring, a } from '@react-spring/three';
+import { useGLTF, TransformControls } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../../store';
@@ -200,31 +199,29 @@ const GLBModel = ({ url }: { url: string }) => {
 export const Scene = () => {
   const {
     modelUrl, primitiveType, modelRotation, modelPosition, modelScale,
-    explodedView, turntableMode,
+    setModelRotation, setModelPosition, setModelScale,
+    explodedView, turntableMode, transformMode, isDraggingGizmo, setIsDraggingGizmo
   } = useStore();
 
-  const groupRef = useRef<THREE.Group>(null);
-  const rotRef   = useRef(modelRotation);
-  useEffect(() => { rotRef.current = modelRotation; }, [modelRotation]);
-
+  const masterGroupRef = useRef<THREE.Group>(null);
   const hasContent = modelUrl || primitiveType;
 
-  const { scale, position } = useSpring({
-    scale: explodedView
-      ? [modelScale * 1.5, modelScale * 1.5, modelScale * 1.5]
-      : [modelScale, modelScale, modelScale],
-    position: modelPosition,
-    config: { mass: 1, tension: 160, friction: 28 },
-  });
+  useFrame((_state, delta) => {
+    if (!masterGroupRef.current || isDraggingGizmo) return;
 
-  useFrame(() => {
-    if (!groupRef.current) return;
+    // Position lerp
+    masterGroupRef.current.position.lerp(new THREE.Vector3(...modelPosition), 10 * delta);
+
+    // Scale lerp
+    const targetScale = explodedView ? modelScale * 1.5 : modelScale;
+    masterGroupRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 10 * delta);
+
+    // Rotation
     if (turntableMode) {
-      groupRef.current.rotation.x = rotRef.current[0];
-      groupRef.current.rotation.y += 0.005;
-      groupRef.current.rotation.z = rotRef.current[2];
+      masterGroupRef.current.rotation.y += 0.5 * delta;
     } else {
-      groupRef.current.rotation.set(...rotRef.current);
+      const targetQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(...modelRotation));
+      masterGroupRef.current.quaternion.slerp(targetQuat, 10 * delta);
     }
   });
 
@@ -236,9 +233,8 @@ export const Scene = () => {
       <pointLight       position={[0, 4, 0]}    intensity={0.4} />
 
       {hasContent && (
-        // @ts-ignore
-        <a.group position={position as any} scale={scale as any}>
-          <group ref={groupRef}>
+        <>
+          <group ref={masterGroupRef}>
             {primitiveType ? (
               <PrimitiveModel type={primitiveType} />
             ) : modelUrl ? (
@@ -247,7 +243,25 @@ export const Scene = () => {
               </Suspense>
             ) : null}
           </group>
-        </a.group>
+
+          {transformMode && masterGroupRef.current && (
+            <TransformControls
+              object={masterGroupRef.current}
+              mode={transformMode}
+              onMouseDown={() => setIsDraggingGizmo(true)}
+              onMouseUp={() => setIsDraggingGizmo(false)}
+              onObjectChange={(e) => {
+                const target = e?.target as any;
+                if (target?.object) {
+                  const obj = target.object;
+                  setModelPosition(obj.position.toArray());
+                  setModelRotation(obj.rotation.toArray());
+                  setModelScale(obj.scale.x);
+                }
+              }}
+            />
+          )}
+        </>
       )}
     </>
   );
