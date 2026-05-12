@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useStore } from '../../store';
-import type { ScannerMode, CameraPreset, RenderQuality } from '../../store';
+import type { ScannerMode, CameraPreset, RenderQuality, PrimitiveType } from '../../store';
 import {
   Upload, RotateCcw, Layers, Monitor, Hand, Box,
   ChevronDown, ChevronRight, Camera, Play,
@@ -124,6 +124,39 @@ const SliderRow = ({ label, value, min, max, step, onChange }: {
   </div>
 );
 
+// ── Add Mesh Dropdown ──────────────────────────────────────────────────────
+const PRIMITIVES: { id: PrimitiveType; label: string; shortcut: string }[] = [
+  { id: 'cube',     label: 'Cube',     shortcut: '' },
+  { id: 'sphere',   label: 'UV Sphere', shortcut: '' },
+  { id: 'cylinder', label: 'Cylinder',  shortcut: '' },
+  { id: 'cone',     label: 'Cone',      shortcut: '' },
+  { id: 'torus',    label: 'Torus',     shortcut: '' },
+  { id: 'plane',    label: 'Plane',     shortcut: '' },
+];
+
+const AddMeshMenu = () => {
+  const { showAddMenu, setShowAddMenu, setPrimitiveType } = useStore();
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setShowAddMenu(false);
+    };
+    if (showAddMenu) document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [showAddMenu, setShowAddMenu]);
+  if (!showAddMenu) return null;
+  return (
+    <div ref={ref} className="add-menu">
+      <div className="add-menu-group">Mesh</div>
+      {PRIMITIVES.map(p => (
+        <button key={p.id} className="add-menu-item" onClick={() => { setPrimitiveType(p.id); setShowAddMenu(false); }}>
+          {p.label}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 // ── Keyboard Shortcuts Modal ───────────────────────────────────────────────
 const ShortcutsModal = ({ onClose }: { onClose: () => void }) => (
   <div className="modal-overlay" onClick={onClose}>
@@ -133,26 +166,39 @@ const ShortcutsModal = ({ onClose }: { onClose: () => void }) => (
         <button className="modal-close" onClick={onClose}><X size={13} /></button>
       </div>
       <div className="modal-body">
+        <div className="shortcut-section-label">Viewport</div>
         {[
-          ['1', 'Camera — Front'],
-          ['2', 'Camera — Side'],
-          ['3', 'Camera — Top'],
-          ['4', 'Camera — Isometric'],
-          ['5', 'Camera — Free'],
-          ['Space', 'Reset transforms'],
-          ['T', 'Toggle Turntable'],
-          ['P', 'Toggle Presentation mode'],
-          ['Esc', 'Exit Presentation mode'],
-          ['Cmd/Ctrl + S', 'Screenshot'],
+          ['LMB drag',   'Rotate model'],
+          ['MMB drag',   'Pan model'],
+          ['Shift+LMB',  'Pan model'],
+          ['Scroll',     'Zoom'],
+          ['RMB drag',   'Pan model'],
         ].map(([k, v]) => (
-          <div key={k} className="shortcut-row">
-            <kbd className="kbd">{k}</kbd>
-            <span>{v}</span>
-          </div>
+          <div key={k} className="shortcut-row"><kbd className="kbd">{k}</kbd><span>{v}</span></div>
         ))}
-        <div className="shortcut-row" style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>Gesture: Thumb up = Screenshot</span>
-        </div>
+        <div className="shortcut-section-label" style={{ marginTop: 10 }}>Keyboard</div>
+        {[
+          ['1–5',        'Camera presets'],
+          ['Shift+A',    'Add mesh'],
+          ['T',          'Turntable toggle'],
+          ['P',          'Presentation mode'],
+          ['Space',      'Reset transforms'],
+          ['Esc',        'Close / Exit'],
+          ['⌘/Ctrl+S',   'Screenshot'],
+        ].map(([k, v]) => (
+          <div key={k} className="shortcut-row"><kbd className="kbd">{k}</kbd><span>{v}</span></div>
+        ))}
+        <div className="shortcut-section-label" style={{ marginTop: 10 }}>Gestures</div>
+        {[
+          ['2 fingers',  'Rotate'],
+          ['3 fingers',  'Pan'],
+          ['Pinch',      'Zoom'],
+          ['Open palm',  'Explode'],
+          ['Fist',       'Reset'],
+          ['Thumb up',   'Screenshot'],
+        ].map(([k, v]) => (
+          <div key={k} className="shortcut-row"><kbd className="kbd" style={{ minWidth: 80 }}>{k}</kbd><span>{v}</span></div>
+        ))}
       </div>
     </div>
   </div>
@@ -176,7 +222,7 @@ export const HUD = () => {
     modelPosition, setModelPosition,
     modelScale, setModelScale,
     explodedView, setExplodedView,
-    modelName, setModel,
+    modelName, primitiveType, setModel,
     materialColor, setMaterialColor,
     roughness, setRoughness,
     metalness, setMetalness,
@@ -190,7 +236,10 @@ export const HUD = () => {
     presentationMode, setPresentationMode,
     renderQuality, setRenderQuality,
     fps, triggerScreenshot,
+    showAddMenu, setShowAddMenu,
   } = useStore();
+
+  const hasContent = !!modelName || !!primitiveType;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textureInputRef = useRef<HTMLInputElement>(null);
@@ -289,6 +338,19 @@ export const HUD = () => {
           <span className="topbar-logo">GESTURA</span>
           <div className="topbar-sep" />
 
+          {/* Add Mesh */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className={`topbar-mode-btn ${showAddMenu ? 'active' : ''}`}
+              onClick={() => setShowAddMenu(!showAddMenu)}
+              title="Add mesh (Shift+A)">
+              + Add
+            </button>
+            <AddMeshMenu />
+          </div>
+
+          <div className="topbar-sep" />
+
           {/* Viewport modes */}
           {([['standard','Solid'], ['wireframe','Wireframe'], ['xray','X-Ray']] as [ScannerMode, string][]).map(([k, l]) => (
             <button key={k} className={`topbar-mode-btn ${scannerMode === k ? 'active' : ''}`}
@@ -305,7 +367,7 @@ export const HUD = () => {
           {/* Camera presets */}
           {camBtns.map(({ key, label }) => (
             <button key={key} className={`topbar-cam-btn ${cameraPreset === key ? 'active' : ''}`}
-              onClick={() => setCameraPreset(key)} title={`Camera: ${key}`}>
+              onClick={() => setCameraPreset(key)} title={`Camera: ${key} view`}>
               {label}
             </button>
           ))}
@@ -328,7 +390,7 @@ export const HUD = () => {
             <button className="topbar-btn" onClick={resetAll} title="Reset (Space)">
               <RotateCcw size={12} />
             </button>
-            <button className="topbar-btn" onClick={() => setShowShortcuts(true)} title="Shortcuts">
+            <button className="topbar-btn" onClick={() => setShowShortcuts(true)} title="Shortcuts (?)">
               <Keyboard size={12} />
             </button>
           </div>
@@ -342,21 +404,35 @@ export const HUD = () => {
           <div style={{ position: 'absolute', bottom: 12, right: 12, zIndex: 10, opacity: 0.8 }}>
             <AxisIndicator />
           </div>
-          {!modelName && (
+          {/* Viewport hint bar */}
+          <div className="viewport-hint">
+            <span>LMB Rotate</span>
+            <span className="hint-sep">·</span>
+            <span>MMB Pan</span>
+            <span className="hint-sep">·</span>
+            <span>Scroll Zoom</span>
+            <span className="hint-sep">·</span>
+            <span>Shift+A Add</span>
+          </div>
+          {!hasContent && (
             <div className="no-model-notice">
               <Box size={28} style={{ marginBottom: 8, opacity: 0.3 }} />
               <p>No model loaded</p>
-              <p className="sub">Import a GLB or GLTF file to begin</p>
-              <button className="topbar-btn accent" style={{ marginTop: 12 }}
-                onClick={() => fileInputRef.current?.click()}>
-                <Upload size={13} /> Import GLB / GLTF
-              </button>
+              <p className="sub">Import a GLB / GLTF or add a primitive mesh</p>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <button className="topbar-btn accent" onClick={() => fileInputRef.current?.click()}>
+                  <Upload size={13} /> Import GLB
+                </button>
+                <button className="topbar-btn" onClick={() => setShowAddMenu(true)}>
+                  + Add Mesh
+                </button>
+              </div>
             </div>
           )}
           {/* Gesture enable overlay */}
           {!gestureEnabled && (
             <div style={{ position: 'absolute', bottom: 12, left: 12, zIndex: 10 }}>
-              <button className="topbar-btn accent" onClick={() => setGestureEnabled(true)}>
+              <button className="topbar-btn" onClick={() => setGestureEnabled(true)}>
                 <Hand size={12} /> Enable Gestures
               </button>
             </div>
@@ -368,7 +444,13 @@ export const HUD = () => {
           {/* Object */}
           <Section label="Object">
             <div className="prop-row">
-              <span className="prop-label">File</span>
+              <span className="prop-label">Source</span>
+              <span className="prop-val mono" style={{ fontSize: '0.62rem' }}>
+                {primitiveType ? 'Primitive' : modelName ? 'File' : '—'}
+              </span>
+            </div>
+            <div className="prop-row">
+              <span className="prop-label">Name</span>
               <span className="prop-val mono" style={{ fontSize: '0.62rem', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {modelName ?? '—'}
               </span>
@@ -515,10 +597,26 @@ export const HUD = () => {
             </div>
           </Section>
 
-          {/* Gestures */}
-          <Section label="Gesture Controls" defaultOpen={false}>
-            <div className="prop-row" style={{ marginBottom: 8 }}>
-              <span className="prop-label">Camera</span>
+          {/* Controls */}
+          <Section label="Controls" defaultOpen={false}>
+            <div className="prop-row" style={{ marginBottom: 4 }}>
+              <span className="prop-label" style={{ fontWeight: 500, color: 'var(--text)' }}>Mouse</span>
+            </div>
+            {[
+              ['LMB drag',  'Rotate'],
+              ['MMB drag',  'Pan'],
+              ['Shift+LMB', 'Pan'],
+              ['RMB drag',  'Pan'],
+              ['Scroll',    'Zoom'],
+            ].map(([k, v]) => (
+              <div key={k} className="prop-row">
+                <span className="prop-label">{k}</span>
+                <span className="prop-val" style={{ fontSize: '0.68rem' }}>{v}</span>
+              </div>
+            ))}
+            <div className="prop-sep" />
+            <div className="prop-row" style={{ marginBottom: 4 }}>
+              <span className="prop-label" style={{ fontWeight: 500, color: 'var(--text)' }}>Gesture (Hand)</span>
               <button
                 className={`toggle-btn ${gestureEnabled ? 'active' : ''}`}
                 onClick={() => setGestureEnabled(!gestureEnabled)}
@@ -529,10 +627,10 @@ export const HUD = () => {
             {[
               ['2 fingers', 'Rotate'],
               ['3 fingers', 'Pan'],
-              ['Pinch', 'Zoom'],
+              ['Pinch',     'Zoom'],
               ['Open palm', 'Explode'],
-              ['Fist', 'Reset all'],
-              ['Thumb up', 'Screenshot'],
+              ['Fist',      'Reset all'],
+              ['Thumb up',  'Screenshot'],
             ].map(([k, v]) => (
               <div key={k} className="prop-row">
                 <span className="prop-label">{k}</span>
@@ -544,24 +642,29 @@ export const HUD = () => {
 
         {/* ── Status Bar ── */}
         <footer className="statusbar">
-          <div className="status-item">
-            <div className={`status-dot ${activeGesture !== 'none' ? 'active' : ''}`} />
-            <span>{gestureLabel[activeGesture] ?? '—'}</span>
-          </div>
-          <div className="statusbar-sep" />
-          {/* Gesture history chips */}
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            {gestureHistory.slice(0, 4).map((g, i) => (
-              <span key={i} className="gesture-chip" style={{ opacity: 1 - i * 0.2 }}>
-                {gestureLabel[g] ?? g}
-              </span>
-            ))}
-          </div>
-          <span style={{ marginLeft: 'auto', display: 'flex', gap: 16 }}>
-            <span>{modelName ?? 'No file'}</span>
-            <div className="statusbar-sep" style={{ height: 12, margin: 0 }} />
-            <span>{scannerMode.toUpperCase()}</span>
-            <div className="statusbar-sep" style={{ height: 12, margin: 0 }} />
+          {gestureEnabled && (
+            <>
+              <div className="status-item">
+                <div className={`status-dot ${activeGesture !== 'none' ? 'active' : ''}`} />
+                <span>{gestureLabel[activeGesture] ?? '—'}</span>
+              </div>
+              <div className="statusbar-sep" />
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                {gestureHistory.slice(0, 3).map((g, i) => (
+                  <span key={i} className="gesture-chip" style={{ opacity: 1 - i * 0.25 }}>
+                    {gestureLabel[g] ?? g}
+                  </span>
+                ))}
+              </div>
+              <div className="statusbar-sep" />
+            </>
+          )}
+          <span className="status-hint">LMB Rotate · MMB Pan · Scroll Zoom · Shift+A Add</span>
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 12, alignItems: 'center' }}>
+            <span>{modelName ?? 'Empty'}</span>
+            <div className="statusbar-sep" style={{ height: 10, margin: 0 }} />
+            <span>{scannerMode}</span>
+            <div className="statusbar-sep" style={{ height: 10, margin: 0 }} />
             <span>{fps} fps</span>
           </span>
         </footer>

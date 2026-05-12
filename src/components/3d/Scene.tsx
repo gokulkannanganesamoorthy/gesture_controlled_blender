@@ -4,6 +4,7 @@ import { useSpring, a } from '@react-spring/three';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../../store';
+import type { PrimitiveType } from '../../store';
 
 // ── FPS Counter ──────────────────────────────────────────────────────────────
 export const FPSCounter = () => {
@@ -43,15 +44,133 @@ export const CameraController = () => {
   return null;
 };
 
+// ── Mouse Controller ──────────────────────────────────────────────────────────
+// LMB drag  → Rotate model   (like gesture: 2 fingers)
+// MMB drag  → Pan model      (like gesture: 3 fingers)
+// Shift+LMB → Pan model
+// Scroll    → Zoom            (like gesture: pinch)
+// RMB drag  → Pan model
+export const MouseController = () => {
+  const { gl } = useThree();
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    canvas.style.cursor = 'crosshair';
+
+    let dragging = false;
+    let button = 0;
+    let lastX = 0;
+    let lastY = 0;
+
+    const ROTATE_SPEED = 0.008;
+    const PAN_SPEED    = 0.007;
+    const ZOOM_SPEED   = 0.12;
+
+    const onDown = (e: MouseEvent) => {
+      if (e.target !== canvas) return;
+      dragging = true;
+      button = e.button;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      canvas.style.cursor = (button === 0 && !e.shiftKey) ? 'grabbing' : 'move';
+      e.preventDefault();
+    };
+
+    const onMove = (e: MouseEvent) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+
+      const { modelRotation, setModelRotation, modelPosition, setModelPosition } =
+        useStore.getState();
+
+      const isPan = button === 1 || button === 2 || e.shiftKey;
+
+      if (isPan) {
+        setModelPosition([
+          modelPosition[0] + dx * PAN_SPEED,
+          modelPosition[1] - dy * PAN_SPEED,
+          modelPosition[2],
+        ]);
+      } else {
+        // LMB → rotate
+        setModelRotation([
+          modelRotation[0] + dy * ROTATE_SPEED,
+          modelRotation[1] + dx * ROTATE_SPEED,
+          modelRotation[2],
+        ]);
+      }
+    };
+
+    const onUp = () => {
+      dragging = false;
+      canvas.style.cursor = 'crosshair';
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const { modelScale, setModelScale } = useStore.getState();
+      const delta = e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED;
+      setModelScale(Math.max(0.05, Math.min(6, modelScale + delta)));
+    };
+
+    const blockCtx = (e: Event) => e.preventDefault();
+
+    canvas.addEventListener('mousedown',   onDown);
+    window.addEventListener('mousemove',   onMove);
+    window.addEventListener('mouseup',     onUp);
+    canvas.addEventListener('wheel',       onWheel, { passive: false });
+    canvas.addEventListener('contextmenu', blockCtx);
+
+    return () => {
+      canvas.removeEventListener('mousedown',   onDown);
+      window.removeEventListener('mousemove',   onMove);
+      window.removeEventListener('mouseup',     onUp);
+      canvas.removeEventListener('wheel',       onWheel);
+      canvas.removeEventListener('contextmenu', blockCtx);
+    };
+  }, [gl]);
+
+  return null;
+};
+
+// ── Primitive Material ─────────────────────────────────────────────────────────
+const PrimMat = () => {
+  const { materialColor, roughness, metalness, scannerMode } = useStore();
+  return (
+    <meshStandardMaterial
+      color={materialColor}
+      roughness={roughness}
+      metalness={metalness}
+      wireframe={scannerMode === 'wireframe'}
+      transparent={scannerMode === 'xray'}
+      opacity={scannerMode === 'xray' ? 0.25 : 1}
+    />
+  );
+};
+
+// ── Primitive Model ───────────────────────────────────────────────────────────
+const PrimitiveModel = ({ type }: { type: NonNullable<PrimitiveType> }) => {
+  switch (type) {
+    case 'cube':     return <mesh castShadow receiveShadow><boxGeometry args={[1.2, 1.2, 1.2]} /><PrimMat /></mesh>;
+    case 'sphere':   return <mesh castShadow receiveShadow><sphereGeometry args={[0.8, 48, 48]} /><PrimMat /></mesh>;
+    case 'cylinder': return <mesh castShadow receiveShadow><cylinderGeometry args={[0.6, 0.6, 1.6, 48]} /><PrimMat /></mesh>;
+    case 'cone':     return <mesh castShadow receiveShadow><coneGeometry args={[0.7, 1.6, 48]} /><PrimMat /></mesh>;
+    case 'torus':    return <mesh castShadow receiveShadow><torusGeometry args={[0.7, 0.25, 24, 100]} /><PrimMat /></mesh>;
+    case 'plane':    return <mesh castShadow receiveShadow rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[2, 2, 8, 8]} /><PrimMat /></mesh>;
+    default: return null;
+  }
+};
+
 // ── GLB Model ─────────────────────────────────────────────────────────────────
 const GLBModel = ({ url }: { url: string }) => {
   const { scene } = useGLTF(url);
   const { textureUrl, materialColor, roughness, metalness, scannerMode } = useStore();
 
-  // Apply material overrides whenever settings change
   useEffect(() => {
-    const loader = textureUrl ? new THREE.TextureLoader() : null;
-    const applyMaterials = (tex?: THREE.Texture) => {
+    const apply = (tex?: THREE.Texture) => {
       scene.traverse((child: any) => {
         if (!child.isMesh) return;
         const mat = child.material as THREE.MeshStandardMaterial;
@@ -63,12 +182,14 @@ const GLBModel = ({ url }: { url: string }) => {
         mat.transparent = scannerMode === 'xray';
         mat.opacity = scannerMode === 'xray' ? 0.25 : 1;
         mat.needsUpdate = true;
+        child.castShadow = true;
+        child.receiveShadow = true;
       });
     };
-    if (loader && textureUrl) {
-      loader.load(textureUrl, applyMaterials);
+    if (textureUrl) {
+      new THREE.TextureLoader().load(textureUrl, apply);
     } else {
-      applyMaterials();
+      apply();
     }
   }, [scene, textureUrl, materialColor, roughness, metalness, scannerMode]);
 
@@ -78,13 +199,15 @@ const GLBModel = ({ url }: { url: string }) => {
 // ── Main Scene ─────────────────────────────────────────────────────────────────
 export const Scene = () => {
   const {
-    modelUrl, modelRotation, modelPosition, modelScale,
+    modelUrl, primitiveType, modelRotation, modelPosition, modelScale,
     explodedView, turntableMode,
   } = useStore();
 
   const groupRef = useRef<THREE.Group>(null);
-  const rotRef = useRef(modelRotation);
+  const rotRef   = useRef(modelRotation);
   useEffect(() => { rotRef.current = modelRotation; }, [modelRotation]);
+
+  const hasContent = modelUrl || primitiveType;
 
   const { scale, position } = useSpring({
     scale: explodedView
@@ -107,17 +230,22 @@ export const Scene = () => {
 
   return (
     <>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[5, 8, 5]} intensity={1.2} castShadow />
+      <ambientLight intensity={0.55} />
+      <directionalLight position={[5, 8, 5]}   intensity={1.2} castShadow shadow-mapSize={[2048, 2048]} />
       <directionalLight position={[-5, -4, -5]} intensity={0.3} color="#aaaaaa" />
+      <pointLight       position={[0, 4, 0]}    intensity={0.4} />
 
-      {modelUrl && (
+      {hasContent && (
         // @ts-ignore
         <a.group position={position as any} scale={scale as any}>
           <group ref={groupRef}>
-            <Suspense fallback={null}>
-              <GLBModel url={modelUrl} />
-            </Suspense>
+            {primitiveType ? (
+              <PrimitiveModel type={primitiveType} />
+            ) : modelUrl ? (
+              <Suspense fallback={null}>
+                <GLBModel url={modelUrl} />
+              </Suspense>
+            ) : null}
           </group>
         </a.group>
       )}

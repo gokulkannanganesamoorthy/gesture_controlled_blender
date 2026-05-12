@@ -3,7 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { Environment, Grid } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import { HUD } from './components/ui/HUD';
-import { Scene, FPSCounter, CameraController } from './components/3d/Scene';
+import { Scene, FPSCounter, CameraController, MouseController } from './components/3d/Scene';
 import { GestureTracker } from './components/interaction/GestureTracker';
 import { useStore } from './store';
 
@@ -21,6 +21,7 @@ function App() {
     setPresentationMode, setTurntableMode, turntableMode,
     setModelRotation, setModelPosition, setModelScale, setExplodedView,
     setCameraPreset, triggerScreenshot,
+    showAddMenu, setShowAddMenu,
   } = useStore();
 
   // Screenshot handler
@@ -51,7 +52,10 @@ function App() {
         case '5': setCameraPreset('free'); break;
         case 'p': case 'P': setPresentationMode(!presentationMode); break;
         case 't': case 'T': setTurntableMode(!turntableMode); break;
-        case 'Escape': setPresentationMode(false); break;
+        case 'Escape': setPresentationMode(false); setShowAddMenu(false); break;
+        case 'A':
+          if (e.shiftKey) { e.preventDefault(); setShowAddMenu(!showAddMenu); }
+          break;
         case ' ':
           e.preventDefault();
           setModelRotation([0, 0, 0]);
@@ -67,9 +71,9 @@ function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [presentationMode, turntableMode, setCameraPreset, setPresentationMode,
+  }, [presentationMode, turntableMode, showAddMenu, setCameraPreset, setPresentationMode,
       setTurntableMode, setModelRotation, setModelPosition, setModelScale,
-      setExplodedView, triggerScreenshot]);
+      setExplodedView, triggerScreenshot, setShowAddMenu]);
 
   const canvasStyle = presentationMode
     ? { position: 'fixed' as const, inset: 0, zIndex: 1 }
@@ -88,6 +92,7 @@ function App() {
         >
           <FPSCounter />
           <CameraController />
+          <MouseController />
           <color attach="background" args={[bgColor]} />
 
           <Suspense fallback={null}>

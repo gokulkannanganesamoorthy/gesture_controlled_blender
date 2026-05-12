@@ -4,12 +4,17 @@ export type ScannerMode = 'standard' | 'wireframe' | 'xray';
 export type Gesture = 'none' | 'swipe' | 'pinch' | 'palm' | 'fist' | 'two_fingers';
 export type CameraPreset = 'free' | 'front' | 'side' | 'top' | 'iso';
 export type RenderQuality = 'low' | 'medium' | 'high';
+export type PrimitiveType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | null;
 
 interface AppState {
   // Model
   modelUrl: string | null;
   modelName: string | null;
   setModel: (url: string, name: string) => void;
+  primitiveType: PrimitiveType;
+  setPrimitiveType: (t: PrimitiveType) => void;
+  showAddMenu: boolean;
+  setShowAddMenu: (v: boolean) => void;
 
   // Viewport
   scannerMode: ScannerMode;
@@ -75,7 +80,11 @@ interface AppState {
 export const useStore = create<AppState>((set) => ({
   modelUrl: null,
   modelName: null,
-  setModel: (url, name) => set({ modelUrl: url, modelName: name }),
+  setModel: (url, name) => set({ modelUrl: url, modelName: name, primitiveType: null }),
+  primitiveType: null,
+  setPrimitiveType: (t) => set({ primitiveType: t, modelUrl: null, modelName: t }),
+  showAddMenu: false,
+  setShowAddMenu: (v) => set({ showAddMenu: v }),
 
   scannerMode: 'standard',
   setScannerMode: (mode) => set({ scannerMode: mode }),

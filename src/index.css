@@ -256,3 +256,50 @@ html, body, #root {
   border-radius: 3px; padding: 2px 6px; color: var(--text);
   white-space: nowrap; min-width: 80px; text-align: center;
 }
+
+/* ── Add Mesh Menu ── */
+.add-menu {
+  position: absolute; top: calc(100% + 4px); left: 0;
+  min-width: 140px; background: var(--bg-panel);
+  border: 1px solid var(--border-light); border-radius: var(--r);
+  z-index: 200; overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.add-menu-group {
+  padding: 6px 12px 4px;
+  font-size: 0.6rem; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.add-menu-item {
+  width: 100%; display: block; padding: 7px 14px;
+  background: transparent; border: none;
+  color: var(--text); font-family: var(--font); font-size: 0.73rem;
+  text-align: left; cursor: pointer; transition: background 0.1s;
+}
+.add-menu-item:hover { background: var(--bg-hover); }
+
+/* ── Viewport Hint Bar ── */
+.viewport-hint {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 0.6rem; color: var(--text-muted);
+  background: rgba(14,14,16,0.7); padding: 3px 12px; border-radius: 20px;
+  border: 1px solid var(--border); pointer-events: none;
+  white-space: nowrap;
+}
+.hint-sep { opacity: 0.4; }
+
+/* ── Shortcut Section Labels ── */
+.shortcut-section-label {
+  font-size: 0.6rem; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--text-muted);
+  padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+/* Status bar hint */
+.status-hint {
+  font-family: var(--mono); font-size: 0.58rem; color: var(--text-muted);
+  opacity: 0.6; white-space: nowrap;
+}
