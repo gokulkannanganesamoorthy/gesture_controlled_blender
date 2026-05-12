@@ -235,13 +235,47 @@ export const HUD = () => {
 
   if (presentationMode) {
     return (
-      <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 100, display: 'flex', gap: 8 }}>
-        <div style={{ position: 'fixed', bottom: 20, left: 20, opacity: 0.6 }}>
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 100 }}>
+        {/* Axis Indicator */}
+        <div style={{ position: 'absolute', top: 20, left: 20, opacity: 0.6 }}>
           <AxisIndicator />
         </div>
-        <button className="topbar-btn accent" onClick={() => setPresentationMode(false)}>
-          <Minimize2 size={13} /> Exit
-        </button>
+
+        {/* Top Right Controls */}
+        <div style={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 8, pointerEvents: 'auto' }}>
+          {!gestureEnabled && (
+            <button className="topbar-btn accent" style={{ background: 'var(--bg-panel)' }} onClick={() => setGestureEnabled(true)}>
+              <Hand size={13} /> Enable Gestures
+            </button>
+          )}
+          <button className="topbar-btn" style={{ background: 'var(--bg-panel)' }} onClick={() => setShowShortcuts(true)}>
+            <Keyboard size={13} /> Shortcuts
+          </button>
+          <button className="topbar-btn accent" style={{ background: 'var(--bg-panel)' }} onClick={() => setPresentationMode(false)} title="Exit Presentation (Esc)">
+            <Minimize2 size={13} /> Exit (Esc)
+          </button>
+        </div>
+
+        {/* Bottom Right - Gesture Status */}
+        <div style={{ position: 'absolute', bottom: 20, right: 20, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, pointerEvents: 'auto' }}>
+          {gestureEnabled && (
+            <div style={{ 
+              background: 'var(--bg-panel)', padding: '6px 12px', borderRadius: 'var(--r)', 
+              border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8,
+              fontFamily: 'var(--mono)', fontSize: '0.7rem', color: 'var(--text-muted)'
+            }}>
+              <div className={`status-dot ${activeGesture !== 'none' ? 'active' : ''}`} />
+              <span>{gestureLabel[activeGesture] ?? '—'}</span>
+            </div>
+          )}
+        </div>
+        
+        {/* Shortcuts Modal */}
+        {showShortcuts && (
+          <div style={{ pointerEvents: 'auto' }}>
+            <ShortcutsModal onClose={() => setShowShortcuts(false)} />
+          </div>
+        )}
       </div>
     );
   }
