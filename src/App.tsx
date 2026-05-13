@@ -67,7 +67,7 @@ function App() {
           e.preventDefault();
           setModelRotation([0, 0, 0]);
           setModelPosition([0, 0, 0]);
-          setModelScale(1);
+          setModelScale([1, 1, 1]);
           setExplodedView(false);
           break;
       }

@@ -40,7 +40,7 @@ All gestures include exponential smoothing, a dead zone filter, and a 6-frame de
 - Import any GLB or GLTF 3D model via file picker
 - Real-time hand tracking via webcam (single hand, GPU-accelerated)
 - XYZ axis indicator with depth-sorted rendering
-- Live transform inspector: Rotation X/Y/Z, Position X/Y/Z, Scale
+- Live transform inspector: Rotation X/Y/Z, Position X/Y/Z, Scale X/Y/Z (independent scaling like a true 3D mesh)
 - Viewport modes: Solid, Wireframe, X-Ray
 - Material customization: color, roughness, metalness
 - HDRI environment presets: City, Sunset, Dawn, Studio

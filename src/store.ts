@@ -36,8 +36,8 @@ interface AppState {
   setModelRotation: (r: [number, number, number]) => void;
   modelPosition: [number, number, number];
   setModelPosition: (p: [number, number, number]) => void;
-  modelScale: number;
-  setModelScale: (s: number) => void;
+  modelScale: [number, number, number];
+  setModelScale: (s: [number, number, number]) => void;
   explodedView: boolean;
   setExplodedView: (v: boolean) => void;
 
@@ -110,7 +110,7 @@ export const useStore = create<AppState>((set) => ({
   setModelRotation: (r) => set({ modelRotation: r }),
   modelPosition: [0, 0, 0],
   setModelPosition: (p) => set({ modelPosition: p }),
-  modelScale: 1,
+  modelScale: [1, 1, 1],
   setModelScale: (s) => set({ modelScale: s }),
   explodedView: false,
   setExplodedView: (v) => set({ explodedView: v }),

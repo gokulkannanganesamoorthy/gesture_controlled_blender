@@ -19,7 +19,7 @@ export const GestureTracker = () => {
 
   const rotationRef = useRef<[number, number, number]>([0, 0, 0]);
   const positionRef = useRef<[number, number, number]>([0, 0, 0]);
-  const scaleRef = useRef<number>(1);
+  const scaleRef = useRef<[number, number, number]>([1, 1, 1]);
   const { modelRotation, modelPosition, modelScale } = useStore();
   useEffect(() => { rotationRef.current = modelRotation; }, [modelRotation]);
   useEffect(() => { positionRef.current = modelPosition; }, [modelPosition]);
@@ -164,7 +164,9 @@ export const GestureTracker = () => {
           if (prevPinchDist.current !== null) {
             const delta = dist - prevPinchDist.current;
             if (Math.abs(delta) > 0.002) {
-              const newScale = Math.max(0.3, Math.min(3.5, scaleRef.current + delta * 8));
+              const currentX = scaleRef.current[0];
+              const newScaleAmt = Math.max(0.3, Math.min(3.5, currentX + delta * 8));
+              const newScale: [number, number, number] = [newScaleAmt, newScaleAmt, newScaleAmt];
               scaleRef.current = newScale;
               setModelScale(newScale);
             }
@@ -177,10 +179,10 @@ export const GestureTracker = () => {
           if (fistCooldown.current <= 0) {
             rotationRef.current = [0, 0, 0];
             positionRef.current = [0, 0, 0];
-            scaleRef.current = 1;
+            scaleRef.current = [1, 1, 1];
             setModelRotation([0, 0, 0]);
             setModelPosition([0, 0, 0]);
-            setModelScale(1);
+            setModelScale([1, 1, 1]);
             setExplodedView(false);
             fistCooldown.current = 60;
           } else {

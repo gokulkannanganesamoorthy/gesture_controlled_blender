@@ -112,7 +112,8 @@ export const MouseController = () => {
       e.preventDefault();
       const { modelScale, setModelScale } = useStore.getState();
       const delta = e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED;
-      setModelScale(Math.max(0.05, Math.min(6, modelScale + delta)));
+      const newScaleAmt = Math.max(0.05, Math.min(6, modelScale[0] + delta));
+      setModelScale([newScaleAmt, newScaleAmt, newScaleAmt]);
     };
 
     const blockCtx = (e: Event) => e.preventDefault();
@@ -213,8 +214,10 @@ export const Scene = () => {
     masterGroupRef.current.position.lerp(new THREE.Vector3(...modelPosition), 10 * delta);
 
     // Scale lerp
-    const targetScale = explodedView ? modelScale * 1.5 : modelScale;
-    masterGroupRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 10 * delta);
+    const targetScale = explodedView
+      ? new THREE.Vector3(modelScale[0] * 1.5, modelScale[1] * 1.5, modelScale[2] * 1.5)
+      : new THREE.Vector3(...modelScale);
+    masterGroupRef.current.scale.lerp(targetScale, 10 * delta);
 
     // Rotation
     if (turntableMode) {
@@ -256,7 +259,7 @@ export const Scene = () => {
                   const obj = target.object;
                   setModelPosition(obj.position.toArray());
                   setModelRotation(obj.rotation.toArray());
-                  setModelScale(obj.scale.x);
+                  setModelScale(obj.scale.toArray() as [number, number, number]);
                 }
               }}
             />

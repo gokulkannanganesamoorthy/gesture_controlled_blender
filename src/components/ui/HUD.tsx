@@ -262,7 +262,7 @@ export const HUD = () => {
 
   const resetAll = () => {
     setModelRotation([0, 0, 0]); setModelPosition([0, 0, 0]);
-    setModelScale(1); setExplodedView(false);
+    setModelScale([1, 1, 1]); setExplodedView(false);
   };
 
   const applyPreset = (key: keyof typeof PRESETS) => {
@@ -490,13 +490,22 @@ export const HUD = () => {
             ))}
             <div className="prop-sep" />
             {/* Scale */}
-            <div className="prop-row">
-              <span className="prop-label">Scale</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <EditableVal value={modelScale} onCommit={v => setModelScale(Math.max(0.01, v))} />
-                <button className="reset-btn" onClick={() => setModelScale(1)}>×</button>
+            {(['x','y','z'] as const).map((axis, i) => (
+              <div key={axis} className="prop-row">
+                <span className={`prop-label ${axis}`}>Scale {axis.toUpperCase()}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <EditableVal
+                    value={modelScale[i]}
+                    onCommit={v => {
+                      const s = [...modelScale] as [number,number,number]; s[i] = Math.max(0.01, v); setModelScale(s);
+                    }}
+                  />
+                  <button className="reset-btn" title="Reset" onClick={() => {
+                    const s = [...modelScale] as [number,number,number]; s[i] = 1; setModelScale(s);
+                  }}>×</button>
+                </div>
               </div>
-            </div>
+            ))}
             <div className="prop-row">
               <span className="prop-label">Exploded</span>
               <button className={`toggle-btn ${explodedView ? 'active' : ''}`}
