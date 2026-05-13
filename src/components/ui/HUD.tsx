@@ -339,7 +339,7 @@ export const HUD = () => {
               className={`topbar-mode-btn ${showAddMenu ? 'active' : ''}`}
               onClick={() => setShowAddMenu(!showAddMenu)}
               title="Add mesh (Shift+A)">
-              + Add
+              + Add <ChevronDown size={10} style={{ marginLeft: 2, opacity: 0.5 }} />
             </button>
             <AddMeshMenu />
           </div>

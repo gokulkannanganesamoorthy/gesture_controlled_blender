@@ -50,12 +50,12 @@ html, body, #root {
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center;
   padding: 0 12px; gap: 4px;
-  overflow: hidden;
 }
 .topbar-logo {
-  font-family: var(--mono); font-size: 0.72rem; font-weight: 500;
-  color: var(--text); letter-spacing: 0.1em; white-space: nowrap;
-  margin-right: 4px;
+  font-family: var(--mono); font-size: 0.75rem; font-weight: 500;
+  color: #fff; letter-spacing: 0.15em; white-space: nowrap;
+  margin-right: 12px; padding: 0 4px;
+  text-shadow: 0 0 10px rgba(255,255,255,0.1);
 }
 .topbar-sep { width: 1px; height: 18px; background: var(--border); margin: 0 6px; flex-shrink: 0; }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
@@ -68,7 +68,7 @@ html, body, #root {
   cursor: pointer; transition: all 0.12s; white-space: nowrap;
 }
 .topbar-mode-btn:hover { background: var(--bg-hover); color: var(--text); }
-.topbar-mode-btn.active { background: var(--bg-active); color: var(--accent); border-color: var(--border-light); }
+.topbar-mode-btn.active { background: var(--bg-active); color: #fff; border-color: rgba(255,255,255,0.2); }
 
 .topbar-cam-btn {
   width: 22px; height: 22px; border-radius: var(--r);
@@ -77,7 +77,7 @@ html, body, #root {
   cursor: pointer; transition: all 0.12s; display: flex; align-items: center; justify-content: center;
 }
 .topbar-cam-btn:hover { background: var(--bg-hover); color: var(--text); }
-.topbar-cam-btn.active { background: var(--bg-active); color: var(--accent); border-color: var(--border-light); }
+.topbar-cam-btn.active { background: var(--bg-active); color: #fff; border-color: rgba(255,255,255,0.2); }
 
 .topbar-btn {
   display: flex; align-items: center; gap: 5px;
@@ -215,9 +215,13 @@ html, body, #root {
 /* ── Webcam ── */
 .webcam-container {
   position: fixed; bottom: 40px; left: 12px;
-  width: 180px; height: 135px; border-radius: var(--r);
-  overflow: hidden; border: 1px solid var(--border); background: #000; z-index: 20;
+  width: 180px; height: 135px; border-radius: 8px;
+  overflow: hidden; border: 1px solid rgba(255,255,255,0.1); 
+  background: #000; z-index: 20;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  transition: transform 0.3s ease;
 }
+.webcam-container:hover { transform: scale(1.02); }
 .webcam-video {
   width: 100%; height: 100%; object-fit: cover;
   transform: scaleX(-1); opacity: 0.65;
@@ -260,10 +264,11 @@ html, body, #root {
 /* ── Add Mesh Menu ── */
 .add-menu {
   position: absolute; top: calc(100% + 4px); left: 0;
-  min-width: 140px; background: var(--bg-panel);
+  min-width: 140px; background: #1b1b1d;
   border: 1px solid var(--border-light); border-radius: var(--r);
-  z-index: 200; overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 1000; overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.7);
+  backdrop-filter: blur(10px);
 }
 .add-menu-group {
   padding: 6px 12px 4px;
@@ -281,12 +286,14 @@ html, body, #root {
 
 /* ── Viewport Hint Bar ── */
 .viewport-hint {
-  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 8px;
-  font-family: var(--mono); font-size: 0.6rem; color: var(--text-muted);
-  background: rgba(14,14,16,0.7); padding: 3px 12px; border-radius: 20px;
-  border: 1px solid var(--border); pointer-events: none;
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--mono); font-size: 0.62rem; color: var(--text-muted);
+  background: rgba(22,22,24,0.85); padding: 5px 16px; border-radius: 20px;
+  border: 1px solid var(--border-light); pointer-events: none;
   white-space: nowrap;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
 .hint-sep { opacity: 0.4; }
 
