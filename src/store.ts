@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export type ScannerMode = 'standard' | 'wireframe' | 'xray';
-export type Gesture = 'none' | 'swipe' | 'pinch' | 'palm' | 'fist' | 'two_fingers';
+export type Gesture = 'none' | 'swipe' | 'pinch' | 'palm' | 'fist' | 'two_fingers' | 'two_hands';
 export type CameraPreset = 'free' | 'front' | 'side' | 'top' | 'iso';
 export type RenderQuality = 'low' | 'medium' | 'high';
 export type PrimitiveType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | null;

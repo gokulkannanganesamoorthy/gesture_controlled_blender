@@ -27,9 +27,10 @@ npm run dev
 
 | Gesture | Action |
 |---------|--------|
+| 2 hands | Stretch / independent scaling on X or Y axis |
 | 2 fingers (index + middle) | Rotate model |
 | 3 fingers (index + middle + ring) | Pan / translate |
-| Pinch (thumb + index) | Zoom in / out |
+| Pinch (thumb + index) | Uniform zoom in / out |
 | Open palm | Toggle exploded view |
 | Fist | Reset all transforms |
 

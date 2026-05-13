@@ -20,6 +20,7 @@ export const GestureTracker = () => {
   const rotationRef = useRef<[number, number, number]>([0, 0, 0]);
   const positionRef = useRef<[number, number, number]>([0, 0, 0]);
   const scaleRef = useRef<[number, number, number]>([1, 1, 1]);
+  const prevTwoHandDist = useRef<number | null>(null);
   const { modelRotation, modelPosition, modelScale } = useStore();
   useEffect(() => { rotationRef.current = modelRotation; }, [modelRotation]);
   useEffect(() => { positionRef.current = modelPosition; }, [modelPosition]);
@@ -46,7 +47,7 @@ export const GestureTracker = () => {
           delegate: 'GPU',
         },
         runningMode: 'VIDEO',
-        numHands: 1,
+        numHands: 2,
       });
       landmarkerRef.current = lm;
 
@@ -87,16 +88,24 @@ export const GestureTracker = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (results.landmarks?.length > 0) {
-        const landmarks = results.landmarks[0];
-        const keyPts = [0, 4, 8, 12, 16, 20];
+        // Draw landmarks for all hands
         ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        for (const i of keyPts) {
-          const p = landmarks[i];
-          ctx.beginPath();
-          ctx.arc(p.x * canvas.width, p.y * canvas.height, i === 0 ? 5 : 3, 0, Math.PI * 2);
-          ctx.fill();
+        for (const handLandmarks of results.landmarks) {
+          const keyPts = [0, 4, 8, 12, 16, 20];
+          for (const i of keyPts) {
+            const p = handLandmarks[i];
+            ctx.beginPath();
+            ctx.arc(p.x * canvas.width, p.y * canvas.height, i === 0 ? 5 : 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
-        processGesture(landmarks);
+        
+        if (results.landmarks.length === 2) {
+          processTwoHands(results.landmarks[0], results.landmarks[1]);
+        } else {
+          prevTwoHandDist.current = null;
+          processGesture(results.landmarks[0]);
+        }
       } else {
         gestureBuffer.current = [];
         stableGesture.current = 'none';
@@ -130,6 +139,41 @@ export const GestureTracker = () => {
       if (ie && me && !re && !pe) return 'two_fingers';
       if (ie && me && re && !pe) return 'three_fingers';
       return 'none';
+    };
+
+    const processTwoHands = (lm1: any[], lm2: any[]) => {
+      setActiveGesture('two_hands');
+      
+      const index1 = lm1[8];
+      const index2 = lm2[8];
+      
+      const dx = index2.x - index1.x;
+      const dy = index2.y - index1.y;
+      const dist = Math.hypot(dx, dy);
+      
+      if (prevTwoHandDist.current !== null) {
+        const delta = dist - prevTwoHandDist.current;
+        if (Math.abs(delta) > 0.005) {
+          const isHorizontal = Math.abs(dx) > Math.abs(dy);
+          
+          const currentScale = scaleRef.current;
+          const newScaleAmt = delta * 10;
+          
+          const newScale: [number, number, number] = [
+            Math.max(0.05, Math.min(10, currentScale[0] + (isHorizontal ? newScaleAmt : 0))),
+            Math.max(0.05, Math.min(10, currentScale[1] + (!isHorizontal ? newScaleAmt : 0))),
+            currentScale[2]
+          ];
+          
+          scaleRef.current = newScale;
+          setModelScale(newScale);
+        }
+      }
+      prevTwoHandDist.current = dist;
+      
+      gestureBuffer.current = [];
+      stableGesture.current = 'none';
+      prevPinchDist.current = null;
     };
 
     const processGesture = (lm: any[]) => {
