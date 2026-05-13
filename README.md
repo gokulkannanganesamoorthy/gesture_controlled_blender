@@ -1,6 +1,6 @@
-# Visionary 3D
+# Gestura
 
-A gesture-controlled 3D model viewer built with React, Three.js, and MediaPipe. Load any GLB/GLTF file and interact with it in real time using your webcam and hand gestures, with no mouse or keyboard needed.
+A gesture-controlled 3D modeling environment built with React, Three.js, and MediaPipe. Featuring Blender-like shortcuts, 3D transform gizmos, and intuitive hand tracking (e.g., corrected non-mirrored swipe rotation).
 
 ## Demo
 

@@ -194,7 +194,7 @@ export const GestureTracker = () => {
           break;
         case 'two_fingers': {
           setActiveGesture('swipe');
-          const dx = smoothX.current - indexTip.x; // negated for mirror
+          const dx = indexTip.x - smoothX.current;
           const dy = indexTip.y - smoothY.current;
           if (Math.abs(dx) > DEAD_ZONE || Math.abs(dy) > DEAD_ZONE) {
             const newRot: [number, number, number] = [
