@@ -638,6 +638,7 @@ export const HUD = () => {
               </button>
             </div>
             {[
+              ['2 hands',   'Stretch X/Y'],
               ['2 fingers', 'Rotate'],
               ['3 fingers', 'Pan'],
               ['Pinch',     'Zoom'],

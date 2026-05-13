@@ -20,7 +20,7 @@ export const GestureTracker = () => {
   const rotationRef = useRef<[number, number, number]>([0, 0, 0]);
   const positionRef = useRef<[number, number, number]>([0, 0, 0]);
   const scaleRef = useRef<[number, number, number]>([1, 1, 1]);
-  const prevTwoHandDist = useRef<number | null>(null);
+  const prevTwoHandDiff = useRef<[number, number] | null>(null);
   const { modelRotation, modelPosition, modelScale } = useStore();
   useEffect(() => { rotationRef.current = modelRotation; }, [modelRotation]);
   useEffect(() => { positionRef.current = modelPosition; }, [modelPosition]);
@@ -106,12 +106,12 @@ export const GestureTracker = () => {
           if (g1 === 'palm' && g2 === 'palm') {
             processTwoHands(results.landmarks[0], results.landmarks[1]);
           } else {
-            prevTwoHandDist.current = null;
+            prevTwoHandDiff.current = null;
             const activeHand = (g1 !== 'none' && g1 !== 'palm') ? results.landmarks[0] : results.landmarks[1];
             processGesture(activeHand);
           }
         } else {
-          prevTwoHandDist.current = null;
+          prevTwoHandDiff.current = null;
           processGesture(results.landmarks[0]);
         }
       } else {
@@ -129,12 +129,12 @@ export const GestureTracker = () => {
       const thumbTip = lm[4], indexTip = lm[8], wrist = lm[0];
       const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
       const palmSize = Math.hypot(wrist.x - lm[9].x, wrist.y - lm[9].y);
-      if (pinchDist / (palmSize + 0.001) < 0.35) return 'pinch';
-
       const ie = lm[8].y < lm[6].y;
       const me = lm[12].y < lm[10].y;
       const re = lm[16].y < lm[14].y;
       const pe = lm[20].y < lm[18].y;
+
+      if (pinchDist / (palmSize + 0.001) < 0.35 || (ie && !me && !re && !pe)) return 'pinch';
       const ext = [ie, me, re, pe].filter(Boolean).length;
 
       if (ext === 0) return 'fist';
@@ -155,21 +155,21 @@ export const GestureTracker = () => {
       const pt1 = lm1[9];
       const pt2 = lm2[9];
       
-      const dx = pt2.x - pt1.x;
-      const dy = pt2.y - pt1.y;
-      const dist = Math.hypot(dx, dy);
+      const diffX = Math.abs(pt2.x - pt1.x);
+      const diffY = Math.abs(pt2.y - pt1.y);
       
-      if (prevTwoHandDist.current !== null) {
-        const delta = dist - prevTwoHandDist.current;
-        if (Math.abs(delta) > 0.005) {
-          const isHorizontal = Math.abs(dx) > Math.abs(dy);
-          
+      if (prevTwoHandDiff.current !== null) {
+        const deltaX = diffX - prevTwoHandDiff.current[0];
+        const deltaY = diffY - prevTwoHandDiff.current[1];
+        
+        // Only scale if the movement is significant to reduce jitter
+        if (Math.abs(deltaX) > 0.005 || Math.abs(deltaY) > 0.005) {
           const currentScale = scaleRef.current;
-          const newScaleAmt = delta * 10;
           
+          // Apply individual scaling to X and Y based on hand separation changes
           const newScale: [number, number, number] = [
-            Math.max(0.05, Math.min(10, currentScale[0] + (isHorizontal ? newScaleAmt : 0))),
-            Math.max(0.05, Math.min(10, currentScale[1] + (!isHorizontal ? newScaleAmt : 0))),
+            Math.max(0.05, Math.min(10, currentScale[0] + (Math.abs(deltaX) > 0.005 ? deltaX * 10 : 0))),
+            Math.max(0.05, Math.min(10, currentScale[1] + (Math.abs(deltaY) > 0.005 ? deltaY * 10 : 0))),
             currentScale[2]
           ];
           
@@ -177,7 +177,7 @@ export const GestureTracker = () => {
           setModelScale(newScale);
         }
       }
-      prevTwoHandDist.current = dist;
+      prevTwoHandDiff.current = [diffX, diffY];
       
       gestureBuffer.current = [];
       stableGesture.current = 'none';
