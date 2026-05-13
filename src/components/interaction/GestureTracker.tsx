@@ -161,18 +161,25 @@ export const GestureTracker = () => {
       if (prevTwoHandDiff.current !== null) {
         const deltaX = diffX - prevTwoHandDiff.current[0];
         const deltaY = diffY - prevTwoHandDiff.current[1];
+        // Only scale the dominant axis of movement to prevent jitter and accidental cross-scaling
+        const isHorizontalMovement = Math.abs(deltaX) > Math.abs(deltaY);
         
-        // Only scale if the movement is significant to reduce jitter
-        if (Math.abs(deltaX) > 0.005 || Math.abs(deltaY) > 0.005) {
+        if (isHorizontalMovement && Math.abs(deltaX) > 0.005) {
           const currentScale = scaleRef.current;
-          
-          // Apply individual scaling to X and Y based on hand separation changes
           const newScale: [number, number, number] = [
-            Math.max(0.05, Math.min(10, currentScale[0] + (Math.abs(deltaX) > 0.005 ? deltaX * 10 : 0))),
-            Math.max(0.05, Math.min(10, currentScale[1] + (Math.abs(deltaY) > 0.005 ? deltaY * 10 : 0))),
+            Math.max(0.05, Math.min(10, currentScale[0] + deltaX * 10)),
+            currentScale[1],
             currentScale[2]
           ];
-          
+          scaleRef.current = newScale;
+          setModelScale(newScale);
+        } else if (!isHorizontalMovement && Math.abs(deltaY) > 0.005) {
+          const currentScale = scaleRef.current;
+          const newScale: [number, number, number] = [
+            currentScale[0],
+            Math.max(0.05, Math.min(10, currentScale[1] + deltaY * 10)),
+            currentScale[2]
+          ];
           scaleRef.current = newScale;
           setModelScale(newScale);
         }
