@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useStore } from '../../store';
 import type { ScannerMode, CameraPreset, RenderQuality, PrimitiveType } from '../../store';
 import {
-  Upload, RotateCcw, Layers, Monitor, Hand, Box,
+  Upload, RotateCcw, Layers, Monitor, Box,
   ChevronDown, ChevronRight, Camera, Play,
   Maximize2, Minimize2, Image, Keyboard, X,
 } from 'lucide-react';
@@ -293,11 +293,6 @@ export const HUD = () => {
 
         {/* Top Right Controls */}
         <div style={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 8, pointerEvents: 'auto' }}>
-          {!gestureEnabled && (
-            <button className="topbar-btn accent" style={{ background: 'var(--bg-panel)' }} onClick={() => setGestureEnabled(true)}>
-              <Hand size={13} /> Enable Gestures
-            </button>
-          )}
           <button className="topbar-btn" style={{ background: 'var(--bg-panel)' }} onClick={() => setShowShortcuts(true)}>
             <Keyboard size={13} /> Shortcuts
           </button>
@@ -319,7 +314,6 @@ export const HUD = () => {
             </div>
           )}
         </div>
-        
         {/* Shortcuts Modal */}
         {showShortcuts && (
           <div style={{ pointerEvents: 'auto' }}>
@@ -432,14 +426,6 @@ export const HUD = () => {
                   + Add Mesh
                 </button>
               </div>
-            </div>
-          )}
-          {/* Gesture enable overlay */}
-          {!gestureEnabled && (
-            <div style={{ position: 'absolute', bottom: 12, left: 12, zIndex: 10 }}>
-              <button className="topbar-btn" onClick={() => setGestureEnabled(true)}>
-                <Hand size={12} /> Enable Gestures
-              </button>
             </div>
           )}
         </div>

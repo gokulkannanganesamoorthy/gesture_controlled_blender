@@ -98,7 +98,7 @@ export const useStore = create<AppState>((set) => ({
   showGrid: true,
   setShowGrid: (v) => set({ showGrid: v }),
 
-  gestureEnabled: false,
+  gestureEnabled: true,
   setGestureEnabled: (v) => set({ gestureEnabled: v }),
   activeGesture: 'none',
   setActiveGesture: (gesture) => set({ activeGesture: gesture }),
