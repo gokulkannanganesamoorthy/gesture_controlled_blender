@@ -100,8 +100,16 @@ export const GestureTracker = () => {
           }
         }
         
-        if (results.landmarks.length === 2) {
-          processTwoHands(results.landmarks[0], results.landmarks[1]);
+        if (results.landmarks.length >= 2) {
+          const g1 = classify(results.landmarks[0]);
+          const g2 = classify(results.landmarks[1]);
+          if (g1 === 'palm' && g2 === 'palm') {
+            processTwoHands(results.landmarks[0], results.landmarks[1]);
+          } else {
+            prevTwoHandDist.current = null;
+            const activeHand = (g1 !== 'none' && g1 !== 'palm') ? results.landmarks[0] : results.landmarks[1];
+            processGesture(activeHand);
+          }
         } else {
           prevTwoHandDist.current = null;
           processGesture(results.landmarks[0]);
@@ -144,11 +152,11 @@ export const GestureTracker = () => {
     const processTwoHands = (lm1: any[], lm2: any[]) => {
       setActiveGesture('two_hands');
       
-      const index1 = lm1[8];
-      const index2 = lm2[8];
+      const pt1 = lm1[9];
+      const pt2 = lm2[9];
       
-      const dx = index2.x - index1.x;
-      const dy = index2.y - index1.y;
+      const dx = pt2.x - pt1.x;
+      const dy = pt2.y - pt1.y;
       const dist = Math.hypot(dx, dy);
       
       if (prevTwoHandDist.current !== null) {
